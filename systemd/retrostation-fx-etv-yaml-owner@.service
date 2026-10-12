@@ -1,0 +1,20 @@
+[Unit]
+Description=RetroStation FX ErsatzTV YAML ownership handoff
+
+[Service]
+Type=oneshot
+TimeoutStartSec=15s
+User=root
+Group=root
+EnvironmentFile=/etc/retrostation-fx/rsfx.env
+ExecStart=/opt/rsfx/venv/bin/python /opt/rsfx/tools/etv_yaml_owner.py
+StandardInput=socket
+StandardOutput=socket
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=CAP_CHOWN CAP_FOWNER CAP_DAC_OVERRIDE

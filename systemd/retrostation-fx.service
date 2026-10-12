@@ -1,0 +1,20 @@
+[Unit]
+Description=RetroStation FX
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/retrostation-fx/rsfx.env
+WorkingDirectory=/opt/rsfx
+ExecStart=/opt/rsfx/venv/bin/uvicorn rsfx.app:app --host ${RSFX_BIND_HOST} --port ${RSFX_PORT}
+Restart=on-failure
+RestartSec=2
+User=retrostation-fx
+Group=retrostation-fx
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,28 @@
+# RetroStation FX v0.1.0 release manifest
+# Current installed-source hashes
+# Regenerate with: python3 tools/update_hashes.py
+# Regenerate after any source change and before release packaging.
+
+91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed  /opt/rsfx/rsfx/__init__.py
+09234fd20e72686588a320985a016b1d5122158ad25f2c4a7a02cd622d35182e  /opt/rsfx/rsfx/app.py
+c291b644420efb9df0a8948bdbb7023486aad911588224a1f059502fee4ea6bb  /opt/rsfx/rsfx/compositions.py
+6ab8626ce2eefb762c341f509a6aa35986499c75e9720eb8b5d9b729320d84af  /opt/rsfx/rsfx/config.py
+b79ea1ad6e90c38c9784ae6b26450cd699871fcecc30a722509b989e983d555b  /opt/rsfx/rsfx/database.py
+a1dd775df99ec0addbe2e42b4d7a8be39f302ab168b8ab303206145834653a00  /opt/rsfx/rsfx/ersatztv.py
+b996b496b7ea46b30b77be1d29a261d0e66cfc0ca4f792c93edaa74e46899a6a  /opt/rsfx/rsfx/ersatztv_restart.py
+72178f4776fce8cf490ec69221418733f66fdbb1c60faf1d5dd7a301210382d8  /opt/rsfx/rsfx/models.py
+d24d943d54c4df84fb27eed9015ae3d33a55cc4f87edec03fcd871c193abc903  /opt/rsfx/rsfx/normalize.py
+84b20db38a97627c123359196616ada9f8524aa30a37dcda766a27b40f8bdb65  /opt/rsfx/rsfx/packet.py
+1e3df3798e51fdb0b202c346962c72f638572677d04e128c50e9a2da12112b24  /opt/rsfx/rsfx/renderer.py
+fbc7c2bfa5c273e0a4ae58ec8d21bb99b161bb3f792fccdb1e608c6b1f99d253  /opt/rsfx/rsfx/templates.py
+7e3f387d465ff174c9007e1572c5857e1b0d831400fea524f2b4542ce8c48d3d  /opt/rsfx/rsfx/timeline.py
+a68a65b1f171a1e58dc8f5d63e90a77475d6ac34c62fd202b638067a22c3a8bd  /opt/rsfx/rsfx/trigger.py
+9a01c594693f5e4a48e96ed6516d229e75dcf4ba03a627fe893e91a6da066edd  /opt/rsfx/rsfx/static/index.html
+0e595cbc94adfdf6a2c54b850ae062e87854bba33a6380061ccf699028254b6e  /opt/rsfx/rsfx/static/app.js
+509279d03a507e8463e89aca057de025886724aa065633b1ffb4485d7f0fe1c8  /opt/rsfx/rsfx/static/style.css
+614dca5b4e134108d07bd93882c1009114898c6469b58104c3be7d3e28924520  /opt/rsfx/adapter/rsfx-etv-adapter.py
+4f00510573f795b5ede6fa8d2aa6d1bdec23bedcbb79d38552f30133d49bd956  /opt/rsfx/tools/selftest.py
+78ea842608c9cb346c0cf1e40d396e38dd36fe86e60fbbd7d84c22b5e67f55da  /opt/rsfx/tools/etv_yaml_owner.py
+0a1b273f99a5c14c6b3f0d67a725688ec3a2653c7fab84bec3f13d809034b5ac  /opt/rsfx/requirements.txt
+f71dedce7093c2e0a433a4dae7bf6bc8dff054a221021776dbf239654ca20710  /opt/rsfx/requirements.lock
+e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67  /opt/rsfx/VERSION

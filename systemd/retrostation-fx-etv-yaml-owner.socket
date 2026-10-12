@@ -1,0 +1,12 @@
+[Unit]
+Description=RetroStation FX ErsatzTV YAML ownership handoff socket
+
+[Socket]
+ListenStream=/run/retrostation-fx-etv-yaml-owner.sock
+SocketUser=retrostation-fx
+SocketGroup=retrostation-fx
+SocketMode=0600
+Accept=yes
+
+[Install]
+WantedBy=sockets.target
