@@ -7,7 +7,7 @@
 fd7815e927c7cd0c164a54a2a1b8d92d1f2c19713a7e067ccca1a154f4325529  ./.github/workflows/security-scans.yml
 3ffe564938fee0db3946091e7f045173b84816c3eaa93e72928418961ec9160e  ./.gitignore
 11a4c17ae59aeb8177eb9cab87cc731613b7a74eb302b881a1873a72a4b6c04e  ./LICENSE
-02e3b582f321375bfc2a3793c31ea01454236af560b35f25ae9dca8868c21441  ./README.md
+8bb6166fb96c237f088d4eb3a96583362e83ebb2edd17efb4e4a2402892fbeb9  ./README.md
 b59cc5144ccec7f7946a8d2ec3ef6b469b01308bcfaecccadd548596dcd2de78  ./SECURITY.md
 e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67  ./app/VERSION
 614dca5b4e134108d07bd93882c1009114898c6469b58104c3be7d3e28924520  ./app/adapter/rsfx-etv-adapter.py
@@ -36,7 +36,12 @@ a68a65b1f171a1e58dc8f5d63e90a77475d6ac34c62fd202b638067a22c3a8bd  ./app/rsfx/tri
 add141cf7b1c21da692eebf49650deb7c75d3d95698c4bbda488e4f93b0242c7  ./config/rsfx.env.example
 f17a2689df902ff1bd887800ae2027b79a9295148350337983e1dce573b8d59f  ./docs/BUILTIN-TEMPLATES.md
 ec0250dfce1b595c2da96633bc0d93aeff586f68891fce2eecb9f8703ddcfd45  ./docs/LIVE-SOURCE-SHA256.txt
-d36b240fe35763b292fddaec5ad5bace9b40284618da9c8651126773ea2931a7  ./docs/RELEASE-NOTES.md
+df6ae77701ecc1dafd232a94bb70f52b60fd03494cb7cf61054d6b64ee3c936b  ./docs/MAINTAINER-GUIDE.md
+987628b66fc0c6a0accfe04b05d25f115ed55defb6b86005460bae00a78255ec  ./docs/RELEASE-NOTES.md
+da655c6b527fe146724e6b778db82fe6ace478b90f32ff0911b8049da36b535d  ./docs/TECHNICAL-REFERENCE.md
+d330dfae66507600c16818bc563c37f75e4ffa903824e3ddfeee1e16b2407ad9  ./docs/USER-GUIDE.md
+0aedbd11dc7d87408b59da22f0d7a97ceb505f659fb3c97938dcb26bf6d5c6a2  ./docs/screenshots/banner.png
+bcc930edf163a476bc4f1a043ba66ccec68bdccef0cdc10b5b1084b7d571c1d8  ./docs/screenshots/rsfx-overlay-gallery-cropped.png
 c01848cc87d6f619c11fa2a18ed0f4521ba2f258de8c276b71c8108db272562b  ./requirements-ci.txt
 476df4f90ef7f7bd6bd9c02a6284256fc5e8a8a7af61b40ae33ce9ef5f35bfaa  ./retrostation_fx_linux.sh
 6d42f9bc016a67214e99fcdf210af6a444ba7fcc1ad238cc55e999f510d4908e  ./systemd/retrostation-fx-etv-yaml-owner.socket
@@ -55,6 +60,6 @@ d99521020d7c39b605758e355038684116e191b8d528cac708012c57a14b2fad  ./tests/test_i
 118f2c1d2b5b1ea49de0036bfa4fdf4acd6f231e841f0bd53f7d75f8e5a6f0f3  ./tests/test_runtime_privacy.py
 e4abf8f550907310d3696d1136a0c16e7cda077832a93efc059b06b5e80b654c  ./tests/test_selftest_optimization.py
 401c086161d9ac5a11fa1270835187b0ff80711f8ba81f39b23dbfd719f5bd55  ./tests/test_service_account.py
-7fb8e0b8185cc60894eb9d835ff6e560dbf0b09aa18d870d3bff966a54d56e4c  ./tests/test_version_metadata.py
+c068854bdd36e55de17f4f6f5da43fb6d4997061b44146ba7ce535840365dbe3  ./tests/test_version_metadata.py
 c09ac307bbf5066c6f7de7afbd55f138b8dfd29eef186f13a33b7c3d87330394  ./tools/update_hashes.py
 2df99bf3c07a656793eb3c5d7debdadb34d068f8e7b541ebc54d0ab7b38b4381  ./verify.sh

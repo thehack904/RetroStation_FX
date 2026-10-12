@@ -23,7 +23,7 @@ proof-of-concept, or beta build is part of the public release history.
 
 ## Target-host installation validation (2026-10-09)
 
-An Ubuntu 24.04 test host completed a controlled **non-purge**
+The Ubuntu 24.04 `iptv` host completed a controlled **non-purge**
 uninstall, reinstall with preserved state, and second in-place installation
 (upgrade mode). The recorded validation reported:
 
@@ -42,8 +42,11 @@ comparisons prove preservation of existing environment settings and an
 empty database only; they do **not** demonstrate preservation of populated
 Styles, assignments, or ErsatzTV YAML/Graphics Element IDs.
 
-This installation check covered an earlier development candidate; it is not
-evidence of a complete final-candidate live integration run.
+The successful validation evidence is retained on the host under
+`/var/backups/retrostation-fx/validation-v010-20261009-195702`.
+The later Bandit-hardening changes merged under PR #54 passed GitHub CI
+and security scans, but this installation run predates those changes.
+A fresh host verification against the final release candidate is required.
 
 Newly discovered Graphics Elements may require reloading or reopening
 the ErsatzTV Schedule Items editor because its Graphics Element list
@@ -119,9 +122,9 @@ affected by multipart-header and query-string denial-of-service advisories.
 
 `pip-audit` 2.10.1 reported no known vulnerabilities in the complete
 21-package `app/requirements.lock` on 2026-10-08. See
-the CI dependency-audit workflow and the lockfile for reproducible dependency
-installation. This application-level audit is not a substitute for live
-target-host/ErsatzTV validation.
+`docs/PUBLICATION-AUDIT.md` for the lock-generation, installation, and
+per-release audit procedure. This application-level audit is not a substitute
+for live target-host/ErsatzTV validation.
 
 The hash-locked dependencies installed cleanly in a fresh Python 3.12
 environment with `--require-hashes`;
