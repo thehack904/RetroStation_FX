@@ -9,7 +9,7 @@
   <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/license-CC--BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="CC BY-NC-SA 4.0 License"></a>
 </p>
 
-**Bring broadcast-style on-screen graphics to your ErsatzTV channels.**
+**Bring broadcast-style on-screen overlay graphics to your ErsatzTV channels.**
 
 RetroStation FX adds customizable graphics such as **Now Playing banners, Now/Next information, and animated program introductions** to your ErsatzTV schedules. Choose a look, customize it in a web browser, and assign it to the programs you want. RSFX handles the graphics while ErsatzTV continues playing your channels.
 
