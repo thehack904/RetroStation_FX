@@ -97,25 +97,59 @@ def check_files(files: dict[str, bytes]) -> None:
 
 
 def update_release_labels(root: Path, version: str, release_date: str) -> None:
+    """Finalize either the earlier development candidate or public RC1.
+
+    Source metadata is deliberately changed only in the output tree, never
+    in the existing public RC1 repository checkout.
+    """
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", release_date):
         raise ValueError("Use YYYY-MM-DD for release date")
+
     readme = root / "README.md"
     value = readme.read_text(encoding="utf-8")
-    value = value.replace(
-        "status-release%20candidate-orange",
-        "status-released-brightgreen",
-    ).replace("Release status: Release Candidate", "Release status: Released")
+    candidate_badges = (
+        ("status-RC1%20%28Beta%29-orange", "Release status: RC1 (Beta)"),
+        ("status-release%20candidate-orange", "Release status: Release Candidate"),
+    )
+    matched = [badge for badge in candidate_badges
+               if badge[0] in value and f'alt="{badge[1]}"' in value]
+    if len(matched) != 1:
+        raise ValueError("Expected exactly one supported candidate status badge")
+    badge, alt = matched[0]
+    value = value.replace(badge, "status-released-brightgreen")
+    value = value.replace(f'alt="{alt}"', 'alt="Release status: Released"')
     readme.write_text(value, encoding="utf-8")
+
     changelog = root / "CHANGELOG.md"
     value = changelog.read_text(encoding="utf-8")
-    needle = f"## [Unreleased] — v{version} development candidate"
-    if needle not in value:
-        raise ValueError("Unexpected development changelog heading")
-    changelog.write_text(value.replace(needle, f"## [v{version}] — {release_date}"), encoding="utf-8")
+    headings = (
+        f"## [Unreleased] — v{version} development candidate",
+        f"## [v{version}-rc.1] — 2026-11-09 (Release Candidate 1 / Beta)",
+    )
+    present = [heading for heading in headings if heading in value]
+    if len(present) != 1:
+        raise ValueError("Expected exactly one recognized candidate changelog heading")
+    changelog.write_text(
+        value.replace(present[0], f"## [v{version}] — {release_date}"),
+        encoding="utf-8",
+    )
+
     release_notes = root / "docs/RELEASE-NOTES.md"
     value = release_notes.read_text(encoding="utf-8")
-    value = value.replace(f"## v{version} — Release candidate (unpublished)",
-                          f"## v{version} — Released {release_date}")
+    note_headings = (
+        f"## v{version} — Release candidate (unpublished)",
+        f"## v{version}-rc.1 — Release Candidate 1 (Public Beta, 2026-11-09)",
+    )
+    present = [heading for heading in note_headings if heading in value]
+    if len(present) != 1:
+        raise ValueError("Expected exactly one recognized candidate release-notes heading")
+    value = value.replace(present[0], f"## v{version} — Released {release_date}")
+    value = value.replace(
+        f"This public beta is labeled **v{version}-rc.1**; the application identifies\n"
+        f"itself as **{version}**",
+        f"This stable release is labeled **v{version}**; the application identifies\n"
+        f"itself as **{version}**",
+    )
     value = value.replace(
         f"This build identifies itself as **{version}**",
         f"Version **{version}** identifies itself",

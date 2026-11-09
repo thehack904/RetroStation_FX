@@ -60,8 +60,15 @@ class ReleaseBuilderTests(unittest.TestCase):
                         if final:
                             self.assertIn("Release status: Released", readme)
                             self.assertIn("## [v0.1.1] — 2026-11-08", changelog)
+                            self.assertNotIn("Release status: RC1 (Beta)", readme)
+                            release_notes = zipped.read(top + "/docs/RELEASE-NOTES.md").decode()
+                            self.assertIn("## v0.1.1 — Released 2026-11-08", release_notes)
                         else:
-                            self.assertIn("Release status: Release Candidate", readme)
+                            self.assertTrue(
+                                "Release status: RC1 (Beta)" in readme
+                                or "Release status: Release Candidate" in readme
+                            )
+                            self.assertIn("## [v0.1.1-rc.1]", changelog)
                         live_manifest = zipped.read(top + "/docs/LIVE-SOURCE-SHA256.txt").decode()
                         manifest = zipped.read(top + "/docs/PACKAGE-SHA256.txt").decode()
                         for frozen in (live_manifest, manifest):

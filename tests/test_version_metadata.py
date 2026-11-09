@@ -78,13 +78,17 @@ class VersionMetadataTests(unittest.TestCase):
         )
         self.assertTrue(
             'alt="Release status: Release Candidate"' in readme
+            or 'alt="Release status: RC1 (Beta)"' in readme
             or 'alt="Release status: Released"' in readme
         )
         self.assertIn('href="CHANGELOG.md"', readme)
         self.assertNotIn("img.shields.io/github/v/release", readme)
         self.assertIn("[Changelog](CHANGELOG.md)", readme)
         self.assertNotIn("v0.2.0", readme)
-        self.assertRegex(release_notes, r"v0\.1\.1 — (Release candidate|Released)")
+        self.assertRegex(
+            release_notes,
+            r"v0\.1\.1(?:-rc\.1)? — (?:Release candidate|Release Candidate 1|Released)",
+        )
         self.assertIn("v0.1.0 — First public release", release_notes)
         self.assertNotIn("PR #", release_notes)
         self.assertNotRegex(release_notes, r"(?i)github\.com/[^/\s]+/[^/\s]+[-_]private")
@@ -94,7 +98,7 @@ class VersionMetadataTests(unittest.TestCase):
         self.assertEqual(VERSION_HEADER, f"# RetroStation FX v{version} development branch")
         for manifest in (live_manifest, package_manifest):
             hashes = [line for line in manifest.splitlines()
-                      if re.match(r"^[0-9a-f]{64}\\s", line)]
+                      if re.match(r"^[0-9a-f]{64}\s", line)]
             if "Static hashes are intentionally not frozen" in manifest:
                 self.assertFalse(hashes)
             else:
