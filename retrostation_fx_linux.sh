@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="0.1.0"
+VERSION="0.1.1"
 
 INSTALL_ROOT="/opt/rsfx"
 CONFIG_ROOT="/etc/retrostation-fx"
@@ -315,10 +315,79 @@ assert_acl_scope() {
     fi
 }
 
+assert_no_symlink_components() {
+    local path="$1" current="/" component
+    local -a components=()
+    if [[ "$path" != /* ]]; then
+        echo "ERROR: Script Graphics directory must be an absolute path." >&2
+        return 1
+    fi
+    IFS=/ read -r -d '' -a components < <(printf '%s\0' "$path")
+    for component in "${components[@]}"; do
+        case "$component" in
+            ""|.) continue ;;
+            ..) current="$(dirname -- "$current")"; continue ;;
+        esac
+        if [ "$current" = "/" ]; then
+            current="/$component"
+        else
+            current="$current/$component"
+        fi
+        if [ -L "$current" ]; then
+            echo "ERROR: Refusing Script Graphics path through a symlink: $current" >&2
+            return 1
+        fi
+    done
+}
+
+# Restore only the missing ACL mask bits needed by RSFX. An ACL entry can
+# exist but grant no *effective* access after an ErsatzTV chmod/upgrade.
+# Do not reactivate masked permissions for unrelated named ACL accounts.
+repair_service_acl() {
+    local path="$1" service_user="$2" required="$3"
+    local mask group_perms desired_mask adjusted_mask effective_group
+    assert_acl_scope "$path" "$service_user" || return 1
+    mask="$(getfacl -cp -- "$path" | awk -F: '$1 == "mask" {print $3; exit}')" || return 1
+    group_perms="$(getfacl -cp -- "$path" | awk -F: '$1 == "group" && $2 == "" {print $3; exit}')" || return 1
+    [ -n "$group_perms" ] || { echo "ERROR: Cannot inspect owning-group ACL on $path." >&2; return 1; }
+    # Existing base group effective access must not be broadened by mask repair.
+    if [ -n "$mask" ]; then
+        desired_mask="$mask"
+        if [[ "$required" == *r* ]]; then desired_mask="r${desired_mask:1}"; fi
+        if [[ "$required" == *w* ]]; then desired_mask="${desired_mask:0:1}w${desired_mask:2}"; fi
+        if [[ "$required" == *x* ]]; then desired_mask="${desired_mask:0:2}x"; fi
+        if [ "$desired_mask" != "$mask" ]; then
+            effective_group=""
+            for ((bit=0; bit<3; bit++)); do
+                if [ "${group_perms:bit:1}" = "${mask:bit:1}" ]; then
+                    effective_group+="${mask:bit:1}"
+                else
+                    effective_group+="-"
+                fi
+            done
+            # If an expanded mask would grant the owner group previously masked
+            # rights, fail closed instead of silently changing unrelated access.
+            for ((bit=0; bit<3; bit++)); do
+                if [ "${group_perms:bit:1}" = "${desired_mask:bit:1}" ] &&
+                   [ "${effective_group:bit:1}" != "${desired_mask:bit:1}" ]; then
+                    echo "ERROR: ACL mask repair on $path would broaden owning-group access; inspect and reconcile its ACL manually." >&2
+                    return 1
+                fi
+            done
+        fi
+        setfacl -m "u:${service_user}:${required},m::${desired_mask}" -- "$path"
+    else
+        # For a new extended ACL, setfacl calculates a mask from the group and
+        # requested user permissions. Do not edit the owning-group ACL.
+        setfacl -m "u:${service_user}:${required}" -- "$path"
+    fi
+}
+
 configure_etv_script_dir_access() {
     local script_dir="$1" service_user="$2" owner_uid="$3" owner_gid="$4"
     local canonical parent file created=0
     local -a parents=()
+    assert_no_symlink_components "$script_dir" || return 1
     canonical="$(realpath -m -- "$script_dir")"
     if [ ! -d "$canonical" ]; then
         mkdir -p -- "$canonical"
@@ -335,19 +404,35 @@ configure_etv_script_dir_access() {
     for ((i=${#parents[@]}-1; i>=0; i--)); do
         parent="${parents[$i]}"
         if ! runuser -u "$service_user" -- test -x "$parent"; then
-            assert_acl_scope "$parent" "$service_user"
-            setfacl -m "u:${service_user}:--x" -- "$parent"
+            repair_service_acl "$parent" "$service_user" "--x" || return 1
+            if ! runuser -u "$service_user" -- test -x "$parent"; then
+                echo "ERROR: Service account cannot traverse $parent after ACL repair; inspect getfacl mask and ancestor permissions." >&2
+                return 1
+            fi
         fi
     done
 
-    assert_acl_scope "$canonical" "$service_user"
-    setfacl -m "u:${service_user}:rwx" -- "$canonical"
+    repair_service_acl "$canonical" "$service_user" "rwx" || return 1
+    # An access(2) check is not sufficient; perform a real create/delete as the
+    # unprivileged service identity. The probe is private and cleaned up.
+    if ! runuser -u "$service_user" -- sh -c '
+        umask 077
+        probe="$(mktemp "$1/.rsfx-write-check.XXXXXXXX")" || exit 1
+        rm -f -- "$probe"
+    ' sh "$canonical"; then
+        echo "ERROR: Service account cannot create and remove YAML in the configured Script Graphics directory; inspect its ACL masks and mount permissions." >&2
+        return 1
+    fi
     while IFS= read -r -d '' file; do
         [ ! -L "$file" ] || continue
         if grep -Eq '^# Managed by RetroStation FX([[:space:]]|$)' "$file" 2>/dev/null; then
-            assert_acl_scope "$file" "$service_user"
+            assert_acl_scope "$file" "$service_user" || return 1
             chown "${owner_uid}:${owner_gid}" "$file"
-            setfacl -m "u:${service_user}:rw-" -- "$file"
+            repair_service_acl "$file" "$service_user" "rw-" || return 1
+            if ! runuser -u "$service_user" -- test -w "$file"; then
+                echo "ERROR: Service account cannot update an existing RSFX-managed YAML file after ACL repair." >&2
+                return 1
+            fi
         fi
     done < <(find "$canonical" -maxdepth 1 -type f \( -name 'rsfx-*.yml' -o -name 'rsfx-*.yaml' \) -print0)
     [ "$created" -eq 0 ] || echo "Created Script Graphics directory owned by ErsatzTV: $canonical"
@@ -648,6 +733,9 @@ mkdir -p "$INSTALL_ROOT/rsfx/static" "$INSTALL_ROOT/adapter" "$INSTALL_ROOT/tool
 find "$INSTALL_ROOT/rsfx" -maxdepth 1 -type f -name '*.py' -delete 2>/dev/null || true
 rm -rf "$INSTALL_ROOT/rsfx/__pycache__" "$INSTALL_ROOT/adapter/__pycache__" "$INSTALL_ROOT/tools/__pycache__"
 install -m 0644 "$APP_SOURCE"/rsfx/*.py "$INSTALL_ROOT/rsfx/"
+# Ship original RGBA graphics as immutable package-owned assets.
+mkdir -p "$INSTALL_ROOT/rsfx/assets/holiday"
+install -m 0644 "$APP_SOURCE"/rsfx/assets/holiday/*.png "$INSTALL_ROOT/rsfx/assets/holiday/"
 install -m 0644 "$APP_SOURCE/rsfx/static/index.html" "$APP_SOURCE/rsfx/static/app.js" "$APP_SOURCE/rsfx/static/style.css" "$INSTALL_ROOT/rsfx/static/"
 install -m 0755 "$APP_SOURCE/adapter/rsfx-etv-adapter.py" "$INSTALL_ROOT/adapter/rsfx-etv-adapter.py"
 if [ -f "$APP_SOURCE/tools/selftest.py" ]; then install -m 0755 "$APP_SOURCE/tools/selftest.py" "$INSTALL_ROOT/tools/selftest.py"; fi

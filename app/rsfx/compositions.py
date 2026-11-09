@@ -119,6 +119,20 @@ COMPOSITIONS = {
             "next": {"x": 0.06, "y": 0.68, "w": 0.88, "h": 0.12, "align": "left", "color": "muted"},
         },
     },
+    "holiday-broadcast": {
+        "id": "holiday-broadcast",
+        # Text-safe center, generously separated from decorative corners.
+        # A plaque intersects the panel at its top edge, deliberately.
+        "panels": [
+            {"kind": "round_rect", "x": 0.055, "y": 0.205, "w": 0.89, "h": 0.725, "fill": "dark", "radius": 0.065},
+            {"kind": "round_rect", "x": 0.29, "y": 0.022, "w": 0.42, "h": 0.227, "fill": "navy", "radius": 0.19},
+        ],
+        "regions": {
+            "channel": {"x": 0.335, "y": 0.077, "w": 0.33, "h": 0.118, "align": "center", "color": "accent"},
+            "now": {"x": 0.347, "y": 0.325, "w": 0.420, "h": 0.286, "align": "left", "color": "light"},
+            "next": {"x": 0.347, "y": 0.686, "w": 0.420, "h": 0.126, "align": "left", "color": "muted"},
+        },
+    }
 }
 
 

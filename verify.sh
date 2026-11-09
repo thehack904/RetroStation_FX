@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_VERSION="0.1.0"
+EXPECTED_VERSION="0.1.1"
 PY="/opt/rsfx/venv/bin/python"
 SELFTEST="/opt/rsfx/tools/selftest.py"
 
@@ -34,7 +34,7 @@ pass() { echo "PASS: $*"; PASS=$((PASS + 1)); }
 fail() { echo "FAIL: $*"; FAIL=$((FAIL + 1)); }
 
 echo "============================================================"
-echo " RetroStation FX v0.1.0 Verification"
+echo " RetroStation FX v0.1.1 Verification"
 echo "============================================================"
 
 if systemctl is-active --quiet retrostation-fx.service; then

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, computed_field, field_validator, model_va
 Position = Literal["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"]
 AnimationStyle = Literal["slide-left", "slide-right", "slide-up", "slide-down", "fade", "none"]
 TriggerPositionMode = Literal["off", "elapsed", "remaining"]
-Theme = Literal["classic-cable", "broadcast-1980s", "cable-1990s", "digital-cable-2000s", "retro-local", "saturday-morning", "movie-channel", "sports-info", "modern-minimal"]
+Theme = Literal["classic-cable", "broadcast-1980s", "cable-1990s", "digital-cable-2000s", "retro-local", "saturday-morning", "movie-channel", "sports-info", "modern-minimal", "holiday-broadcast"]
 
 
 class Appearance(BaseModel):
@@ -35,6 +35,10 @@ class Appearance(BaseModel):
         default=None,
         max_length=160,
     )
+
+    holiday_theme: Literal["automatic", "thanksgiving", "christmas", "new-year"] = "automatic"
+    holiday_artwork_mode: Literal["random-per-program"] = "random-per-program"
+    holiday_decorations: bool = True
 
     @model_validator(mode="before")
     @classmethod

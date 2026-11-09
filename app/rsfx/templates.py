@@ -113,6 +113,25 @@ BUILTIN_TEMPLATES = [
             appearance=Appearance(theme="modern-minimal", position="bottom-left", width_percent=58, opacity=0.86, font_size=27, channel_font_size=12, now_font_size=27, next_font_size=16, accent="#FFFFFF", entrance_animation_style="fade", entrance_duration_seconds=0.42, exit_animation_style="fade", exit_duration_seconds=0.32),
         ),
     },
+    {
+        "id": "holiday-broadcast",
+        "family": "Seasonal movie channel",
+        "name": "Holiday Broadcast",
+        "description": "Thanksgiving, Christmas and New Year's illustrated broadcast lower third with stable per-program artwork and automatic/manual holiday themes.",
+        "style": StylePut(
+            overlay_display_seconds=9.0,
+            trigger_policy=TriggerPolicy(show_on_tune=True, show_on_program_change=True),
+            appearance=Appearance(
+                theme="holiday-broadcast", position="bottom-center", width_percent=90,
+                opacity=0.94, font_size=30, channel_font_size=20,
+                now_font_size=30, next_font_size=20, accent="#D8B46A",
+                entrance_animation_style="fade", entrance_duration_seconds=0.65,
+                exit_animation_style="fade", exit_duration_seconds=0.45,
+                holiday_theme="automatic", holiday_artwork_mode="random-per-program",
+                holiday_decorations=True,
+            ),
+        ),
+    }
 ]
 
 

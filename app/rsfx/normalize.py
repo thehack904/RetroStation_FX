@@ -172,13 +172,15 @@ def normalize_context(
     ).strip()
 
     program_key = "|".join(
-        [
+        value
+        for value in (
             program_start,
             program_stop,
             cs,
             csub,
             media_path,
-        ]
+        )
+        if value
     )
 
     elapsed = _timespan_seconds(

@@ -2,8 +2,6 @@
 
 This document contains the implementation and operational details moved out of the main README. The [README](../README.md) is the starting point for everyday ErsatzTV users.
 
-> This reference describes the private development baseline. Review release-validation or development-status language before exporting to the public repository.
-
 ## Architecture
 
 RSFX Styles are reusable and channel-independent.

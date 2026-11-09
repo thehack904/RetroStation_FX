@@ -5,11 +5,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/thehack904/RetroStation_FX/releases"><img src="https://img.shields.io/badge/version-v0.1.0-blue?style=for-the-badge" alt="Version 0.1.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-v0.1.1-blue?style=for-the-badge" alt="Code version v0.1.1"></a>
+  <img src="https://img.shields.io/badge/status-RC1%20%28Beta%29-orange?style=for-the-badge" alt="Release status: RC1 (Beta)">
   <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/license-CC--BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="CC BY-NC-SA 4.0 License"></a>
 </p>
 
-**Bring broadcast-style on-screen overlay graphics to your ErsatzTV channels.**
+**Bring broadcast-style on-screen graphics to your ErsatzTV channels.**
 
 RetroStation FX adds customizable graphics such as **Now Playing banners, Now/Next information, and animated program introductions** to your ErsatzTV schedules. Choose a look, customize it in a web browser, and assign it to the programs you want. RSFX handles the graphics while ErsatzTV continues playing your channels.
 
@@ -26,11 +27,11 @@ RSFX is a separate, community-developed project that works with **ErsatzTV Legac
 - **Web interface** for editing and previewing your graphics.
 - **Local-first operation** with no cloud account required.
 
-See the [built-in design catalog](docs/BUILTIN-TEMPLATES.md) for the styles included in v0.1.0.
+See the [built-in design catalog](docs/BUILTIN-TEMPLATES.md) for the available overlays and configuration options.
 
 ### Built-in overlay previews
 
-These are the actual preview designs from the RSFX Template Library, shown without the editing controls. No sample television programs or channel logos are added.
+These previews illustrate nine RSFX Template Library designs without the editing controls. Additional designs are covered in the [built-in catalog](docs/BUILTIN-TEMPLATES.md). No sample television programs or channel logos are added.
 
 <p align="center">
   <img src="docs/screenshots/rsfx-overlay-gallery-cropped.png" width="1000" alt="Nine built-in RetroStation FX overlay designs from the Template Library">
@@ -77,7 +78,7 @@ A successful Save alone does not mean ErsatzTV has discovered the new graphics. 
 
 ## Included designs
 
-v0.1.0 includes designs for classic cable, 1980s broadcast, 1990s cable, early digital cable, local station, Saturday morning, movies, sports, and a clean modern look. You can start with any design and make it your own.
+The Template Library includes classic cable, decade-inspired broadcast graphics, local-station looks, Saturday-morning designs, movie and sports overlays, a clean modern layout, and Holiday Broadcast seasonal artwork. Choose a design and customize it for your channel.
 
 Browse the full [template list and usage notes](docs/BUILTIN-TEMPLATES.md).
 
@@ -87,7 +88,9 @@ Browse the full [template list and usage notes](docs/BUILTIN-TEMPLATES.md).
 - [Installation, upgrades, and verification](docs/USER-GUIDE.md) — common tasks and troubleshooting.
 - [Technical reference](docs/TECHNICAL-REFERENCE.md) — architecture, security, networking, and service internals.
 - [Maintainer guide](docs/MAINTAINER-GUIDE.md) — automated tests, CI, and versioning.
-- [Release notes](docs/RELEASE-NOTES.md) — changes in v0.1.0.
+- [Changelog](CHANGELOG.md) — completed changes by release.
+- [Release details](docs/RELEASE-NOTES.md) — detailed release and validation documentation.
+- [Holiday Broadcast](docs/HOLIDAY-BROADCAST.md) — seasonal art, controls, program rotation and preview behavior.
 - [Security policy](SECURITY.md) — report vulnerabilities privately.
 
 ## Security and updates

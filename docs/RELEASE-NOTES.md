@@ -1,156 +1,123 @@
-# RetroStation FX v0.1.0 — First Public Release
+# RetroStation FX — Release details
 
-## Status
+For a concise version history, see [CHANGELOG.md](../CHANGELOG.md).
+This document describes shipped behavior and technical release requirements.
+It does not represent a commitment to future features or release dates.
 
-RetroStation FX v0.1.0 is the first public RSFX release. No private prototype,
-proof-of-concept, or beta build is part of the public release history.
+## v0.1.1-rc.1 — Release Candidate 1 (Public Beta, 2026-11-09)
 
-## Proven behavior
+This public beta is labeled **v0.1.1-rc.1**; the application identifies
+itself as **0.1.1** in the application, health endpoint,
+Web UI, installer, managed YAML metadata and verification script. An older
+installation keeps its original runtime version until upgraded and restarted.
+The version badge describes the source version; it is not proof that a public
+GitHub release has been published.
 
-- Styles are reusable and channel-independent.
-- RSFX writes one managed Script Graphics YAML per Style.
-- ErsatzTV discovers managed YAML as Script Graphics elements.
-- Program Schedule Items can reference those Graphics Elements.
-- Materialized playout items carry the assigned Graphics Element.
-- ErsatzTV launches the RSFX adapter for active scheduled graphics.
-- Legacy Script Graphics context can omit channel identity.
-- RSFX uses `Channel_StartTime` as the playback-session identity.
-- Tune and program-change triggers render correctly in the same session.
-- Percentage-position triggers use persistent runtime-session state.
-- RSFX returns Packet v1 Rectangle payloads.
-- ErsatzTV performs final graphics composition and encoding.
-- No ErsatzTV source patch is required.
+### Holiday Broadcast
 
-## Target-host installation validation (2026-10-09)
+- Adds **Holiday Broadcast** as the tenth built-in FX template, retaining
+  the original nine designs and compatibility with previously saved Styles.
+- Provides Thanksgiving, Christmas, New Year's, and neutral presentations,
+  with automatic holiday windows and manual theme selection.
+- Includes twelve original transparent PNGs (four for each holiday) and
+  deterministic program-specific artwork rotation. Artwork does not change
+  randomly from frame to frame or depend on remote image servers.
+- Renders seasonal illustrations completely within transparent margins
+  without clipping or artificial edge-specific fading.
+- Supports independent channel plaque, NOW and NEXT display controls.
+  Disabling an element also removes its corresponding plaque, label or
+  divider. An explicit channel-label override handles missing station names
+  without mistaking the current program title for the channel.
+- Uses the same Pillow rendering implementation for the browser preview and
+  ErsatzTV Legacy Packet v1/BGRA output.
 
-The Ubuntu 24.04 `iptv` host completed a controlled **non-purge**
-uninstall, reinstall with preserved state, and second in-place installation
-(upgrade mode). The recorded validation reported:
+For configuration, calendar boundaries and controls, see
+[Holiday Broadcast](HOLIDAY-BROADCAST.md).
 
-- ErsatzTV and RSFX active at preflight; SQLite integrity `ok`.
-- Existing `rsfx.env` configuration: 11 values retained across both passes.
-- Both installations rebuilt the hash-locked Python environment, completed the
-  installed selftest, and reported `{"ok":true,"version":"0.1.0","packet_mode":true}`.
-- `retrostation-fx.service` remained enabled and running; the YAML ownership
-  helper socket was active after reinstall.
-- No `uninstall --purge` operation was performed.
+### Native Linux installation and Save + Sync
 
-**Scope limitation:** The persistent SQLite database held zero channels,
-zero Styles, zero user templates, and zero Style-to-channel assignments.
-The RSFX YAML snapshot also held zero files. Therefore the successful
-comparisons prove preservation of existing environment settings and an
-empty database only; they do **not** demonstrate preservation of populated
-Styles, assignments, or ErsatzTV YAML/Graphics Element IDs.
+- Checks effective service-account ACL traversal through ErsatzTV Script
+  Graphics ancestor directories, including access masked by an ACL group
+  mask. It limits any repair to the required RSFX access and avoids widening
+  unrelated directory identities.
+- Tests write access using the unprivileged RSFX account before deployment.
+  Filesystem permission problems are reported without exposing local host paths.
+- Retains saved Styles when deployment fails, allowing correction and retry.
+- Preserves existing RSFX data, configuration and managed YAML during supported
+  non-purge upgrades. A purge deliberately removes managed state.
 
-The successful validation evidence is retained on the host under
-`/var/backups/retrostation-fx/validation-v010-20261009-195702`.
-The later Bandit-hardening changes merged under PR #54 passed GitHub CI
-and security scans, but this installation run predates those changes.
-A fresh host verification against the final release candidate is required.
+### Dependencies and validation
 
-Newly discovered Graphics Elements may require reloading or reopening
-the ErsatzTV Schedule Items editor because its Graphics Element list
-is populated when the editor initializes.
+- Updates the direct Pillow constraint to `pillow>=13.0.0,<14` and the
+  SHA-256-verified dependency lock to Pillow 13.0.0.
+- Regression coverage includes original and seasonal templates, version
+  consistency, rendering, input validation, native installer permissions, and
+  package-file inventory. The final installed-source manifest must cover all
+  deployed modules and bundled graphics.
+- **OpenJPEG security assessment:** GitHub advisory
+  [GHSA-78g4-xqwv-q3g8](https://github.com/advisories/GHSA-78g4-xqwv-q3g8)
+  identifies Pillow 13.0.0 as the corrected version. Pillow upstream applied
+  the OpenJPEG backport in commits
+  [5f8114c](https://github.com/python-pillow/Pillow/commit/5f8114c8096b181fae493543cd3837d9f9a971cc)
+  and [d3470c3](https://github.com/python-pillow/Pillow/commit/d3470c327840f4c216a1610f30e7091dfd0b97c0).
+  The RSFX artwork loader additionally restricts the decoded formats to
+  `PNG` **before header inspection**, so a JPEG 2000 codestream renamed
+  with a PNG extension cannot select the OpenJPEG decoder through that path.
+  This is an application-level mitigation and vendor-patch reference, not
+  independent proof of the exact native binary in the locked Linux wheel.
+  Verify the shipped wheel's patch provenance or document explicit acceptance
+  of the restricted-codec attack surface before public publication.
+- **Release package:** The sanitized source archive builder exports only
+  public-facing files, verifies both generated SHA-256 manifests against
+  the exact package, preserves executable installer permissions and can
+  finalize changelog/README status after installation acceptance.
+- **Before publication:** Validate a fresh native Linux install and a
+  non-purge upgrade, including a populated database, preserved YAML and
+  ErsatzTV schedule assignments. Confirm actual tune and program-change
+  playback, Save + Sync, and `RSFX 0.1.1 · online` on the installed Web UI.
+  Re-run CI/security checks and generate final SHA-256 manifests against the
+  audited, frozen release source.
 
-## Regression coverage
+The built-in artwork is packaged with the application. This version does not
+provide an arbitrary image upload endpoint or require an ErsatzTV API key.
 
-The installed selftest covers:
+## v0.1.0 — First public release (2026-10-12)
 
-- SQLite Style creation
-- computed Style display labels
-- managed YAML friendly-name generation
-- Legacy EPG NOW/NEXT normalization
-- channel-less `Channel_StartTime` runtime sessions
-- runtime diagnostics insertion
-- tune trigger
-- program-change trigger
-- Packet v1 Rectangle output
+### Features
 
-The installer and `verify.sh` run the installed selftest.
+- Reusable, channel-independent graphical Styles.
+- Nine original broadcast-inspired built-in templates.
+- Web UI to create, preview and customize lower-third designs, typography,
+  positions, opacity, animations and triggers.
+- NOW/NEXT overlays driven by ErsatzTV Legacy Script Graphics schedule context.
+- Managed YAML Save + Sync with manually selected Program Schedule Item
+  Graphics Elements.
+- Packet v1/BGRA output for ErsatzTV's graphics composition and encoding.
+- Native Linux installation, service management and verification utilities.
 
-## Upgrade behavior
+### Installation and upgrade behavior
 
-Normal install/upgrade preserves:
+The native installer configures a dedicated `retrostation-fx` service account
+and its state and configuration directories. Normal reinstall and upgrade
+paths preserve the SQLite database, environment configuration and managed
+ErsatzTV YAML. Explicit `uninstall --purge` removes managed RSFX state;
+ErsatzTV may then assign new Graphics Element IDs to newly discovered YAML.
 
-- RSFX SQLite state
-- RSFX configuration
-- managed YAML paths
-- existing ErsatzTV assignments when the YAML path remains unchanged
+Validated installation work for the original release included non-purge
+uninstall/reinstall and upgrade lifecycle checks, endpoint/selftest checks
+and an empty-state preservation scenario. Those results do **not** establish
+populated-Style data preservation or prove correctness for later versions.
+Current releases require their own installed-host acceptance tests.
 
-A purge intentionally removes RSFX state and managed YAML. Schedule assignments are not recreated automatically after a purge because ErsatzTV creates new Graphics Element IDs for newly discovered YAML files.
+### Security and compatibility
 
-## Service account and filesystem permissions
+- Uses restricted filesystem permissions for application code, state,
+  environment configuration and managed ErsatzTV graphics.
+- Supports local-first operation; the management Web UI does not provide
+  authentication and should not be exposed directly to the public internet.
+- Keeps a hash-locked runtime dependency tree and CI-based dependency checks.
+- Integrates through ErsatzTV Legacy Script Graphics rather than modifying
+  ErsatzTV itself or requiring an ErsatzTV API credential.
 
-RSFX now runs as the locked `retrostation-fx` system account. `/opt/rsfx`
-remains root-owned and service-read-only, `/var/lib/retrostation-fx` is
-service-owned, and the environment file stays root-only for systemd to load.
-Installer-managed POSIX ACLs give the account only the access required for the
-configured ErsatzTV Script Graphics path and existing RSFX-managed YAML; the
-installer refuses to widen pre-existing named ACL permissions. Normal
-uninstall preserves the account and managed state, while purge removes
-RSFX-managed YAML and its ACL entries. On install and upgrade, identified RSFX
-YAML is owned by ErsatzTV's effective service UID/GID; unrelated YAML ownership
-is left unchanged. A hardened root-owned helper, activated through a mode-0600
-systemd socket accessible only to the RSFX service account, validates the peer,
-configured directory, managed filename, and marker before handing off a YAML
-file and applying its RSFX write ACL. The web service retains
-`NoNewPrivileges=true`.
-
-Before backup or installation changes, the installer verifies `setfacl`,
-`getfacl`, and `runuser`. On Debian/Ubuntu it automatically installs missing
-`acl` and/or `util-linux` packages, tries existing package indexes first, and
-refreshes indexes only when the initial install fails. Package installation is
-skipped when all tools are already available.
-
-## Dependency security baseline
-
-The runtime lock was rebuilt from the direct requirements with pip-tools 7.6.2
-and includes SHA-256 hashes for the 21 pinned runtime packages. Dependency
-installation was verified on Ubuntu 24.04 with CPython 3.12.3 and venv-seeded
-pip 24.0; the installer does not upgrade pip or install wheel during normal
-install/upgrade. The relevant pinned baseline is FastAPI 0.142.4 with Starlette
-1.7.0 and Pillow 12.3.0. `python-multipart` 0.0.20 was removed because RSFX does
-not use multipart forms or uploads.
-
-This refresh addresses the known Pillow 11.2.1 issues, including BCn encoding
-buffer overflow, PSD/FITS decoding issues, and missing decompression-bomb checks.
-It also replaces Starlette 0.46.2, which was affected by the form-limit DoS,
-Windows UNC-path, and Range-header DoS advisories. Starlette 0.x versions remain
-affected by the form-limit and UNC-path advisories, so the compatible FastAPI
-pair uses the patched 1.x line. The unused `python-multipart` version was
-affected by multipart-header and query-string denial-of-service advisories.
-
-`pip-audit` 2.10.1 reported no known vulnerabilities in the complete
-21-package `app/requirements.lock` on 2026-10-08. See
-`docs/PUBLICATION-AUDIT.md` for the lock-generation, installation, and
-per-release audit procedure. This application-level audit is not a substitute
-for live target-host/ErsatzTV validation.
-
-The hash-locked dependencies installed cleanly in a fresh Python 3.12
-environment with `--require-hashes`;
-`pip check`, `pip-audit`, the 69-test unittest suite (one root-only test
-skipped), the installed selftest, and a FastAPI/Starlette health/capabilities
-smoke test passed. The selftest generated 210 Packet v1 frames. In the earlier
-installer-change sandbox, `verify.sh` could not run because no RSFX system
-service was installed. The subsequent October 9 host install/upgrade result
-is recorded above; live ErsatzTV rendering and populated-state verification
-remain unproven by that result.
-
-## Remaining target-host validation
-
-The controlled install/upgrade lifecycle passed on 2026-10-09, as recorded
-above. Still requiring release-candidate verification are a **populated**
-Style/template/assignment database and managed-YAML preservation test;
-ErsatzTV Graphics Element discovery and assignment; materialized playout and
-visible tune/program-change overlays; and any purge/stale-element cleanup
-claims, which were not exercised in the non-purge test. Validate restart-state
-detection, `verify.sh`, and final-candidate privileged YAML ownership behavior
-on the actual host as applicable. LAN/loopback exposure controls also require
-target-host verification. Do not characterize these checks as completed until
-their own evidence exists.
-
-## Deferred, not release-blocking
-
-- automatic ErsatzTV schedule assignment management
-- broader platform/distribution testing
-- additional overlay types beyond NOW/NEXT
+For installation and troubleshooting, see [User Guide](USER-GUIDE.md).
+For implementation details, see [Technical Reference](TECHNICAL-REFERENCE.md).

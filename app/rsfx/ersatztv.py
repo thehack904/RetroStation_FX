@@ -7,6 +7,10 @@ import socket
 from .config import settings
 
 
+class YamlFilesystemPermissionError(PermissionError):
+    pass
+
+
 def yaml_path_for(style):
     return settings.ersatztv_script_dir / f"rsfx-{style.slug}.yml"
 
@@ -65,15 +69,18 @@ def sync_yaml(style):
     if not style.manage_ersatztv_yaml:
         return None
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    is_new = not path.exists()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        is_new = not path.exists()
 
-    # ErsatzTV watches this directory. Rewrite in place so an existing
-    # graphics element is not removed/recreated merely because a Style
-    # was edited.
-    path.write_text(generate_yaml(style), encoding="utf-8")
-    if is_new:
-        path.chmod(0o644)
+        # ErsatzTV watches this directory. Rewrite in place so an existing
+        # graphics element is not removed/recreated merely because a Style
+        # was edited.
+        path.write_text(generate_yaml(style), encoding="utf-8")
+        if is_new:
+            path.chmod(0o644)
+    except PermissionError as exc:
+        raise YamlFilesystemPermissionError from exc
     handoff_yaml_ownership(path)
     return path
 

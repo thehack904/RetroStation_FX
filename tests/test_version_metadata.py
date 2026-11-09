@@ -15,7 +15,7 @@ from rsfx.app import capabilities, health
 from rsfx.config import settings
 from rsfx.ersatztv import generate_yaml
 from tools.update_hashes import VERSION as HASH_MANIFEST_VERSION
-from tools.update_hashes import VERSION_HEADER, package_files
+from tools.update_hashes import LIVE_PATHS, VERSION_HEADER, package_files
 
 
 class VersionMetadataTests(unittest.TestCase):
@@ -29,14 +29,14 @@ class VersionMetadataTests(unittest.TestCase):
             id=1,
         )
 
-        self.assertEqual(version, "0.1.0")
+        self.assertEqual(version, "0.1.1")
         self.assertEqual(__version__, version)
         self.assertEqual(settings.version, version)
         self.assertEqual(health()["version"], version)
         self.assertEqual(capabilities()["version"], version)
         self.assertTrue(generate_yaml(style).startswith(f"# Managed by RetroStation FX {version}\n"))
 
-    def test_user_visible_release_metadata_uses_v0_1_0(self):
+    def test_user_visible_release_metadata_uses_v0_1_1(self):
         version = (ROOT / "app/VERSION").read_text(encoding="utf-8").strip()
         installer = (ROOT / "retrostation_fx_linux.sh").read_text(encoding="utf-8")
         verify = (ROOT / "verify.sh").read_text(encoding="utf-8")
@@ -46,29 +46,86 @@ class VersionMetadataTests(unittest.TestCase):
         live_manifest = (ROOT / "docs/LIVE-SOURCE-SHA256.txt").read_text(encoding="utf-8")
         package_manifest = (ROOT / "docs/PACKAGE-SHA256.txt").read_text(encoding="utf-8")
 
-        self.assertEqual(re.search(r'^VERSION="([^"]+)"', installer, re.MULTILINE).group(1), "0.1.0")
-        self.assertIn('EXPECTED_VERSION="0.1.0"', verify)
+        self.assertEqual(re.search(r'^VERSION="([^"]+)"', installer, re.MULTILINE).group(1), version)
+        self.assertIn(f'EXPECTED_VERSION="{version}"', verify)
         self.assertIn(
             "<h1>RetroStation FX</h1><p>Graphics &amp; Overlay Engine for ErsatzTV</p>",
             ui,
         )
         self.assertNotIn("<p>v0.1.0", ui)
         self.assertIn('<div id="health" class="pill">Checking…</div>', ui)
+        frontend = (ROOT / "app/rsfx/static/app.js").read_text(encoding="utf-8")
+        # Web UI must display the runtime health version, not a static string.
+        self.assertIn("RSFX ${h.version} · online", frontend)
+        self.assertNotIn("RSFX 0.1.0 · online", frontend)
+        self.assertIn(f"RetroStation FX v{version} Verification", verify)
+        audit_script = ROOT / "tools/audit_release_tree.py"
+        # The release audit script is intentionally absent from public
+        # archives. Verify its version if present in a maintainer checkout.
+        if audit_script.is_file():
+            release_audit = audit_script.read_text(encoding="utf-8")
+            self.assertEqual(
+                re.search(r'^RELEASE_VERSION = "([^"]+)"',
+                          release_audit, re.MULTILINE).group(1), version
+            )
         self.assertTrue(readme.startswith("# RetroStation FX (RSFX)\n"))
-        self.assertIn("v0.1.0", readme)
-        self.assertIn("first public RSFX release", release_notes)
-        self.assertIn("First Public Release", release_notes)
-        self.assertIn("first public RSFX release", release_notes)
+        # Code-version badge is valid before a public release is published.
+        # Keep branch version and release status independent; never require a
+        # GitHub Releases tag for the branch currently under development.
+        self.assertIn(
+            f"https://img.shields.io/badge/version-v{version}-blue?style=for-the-badge",
+            readme,
+        )
+        self.assertTrue(
+            'alt="Release status: Release Candidate"' in readme
+            or 'alt="Release status: Released"' in readme
+        )
+        self.assertIn('href="CHANGELOG.md"', readme)
+        self.assertNotIn("img.shields.io/github/v/release", readme)
+        self.assertIn("[Changelog](CHANGELOG.md)", readme)
+        self.assertNotIn("v0.2.0", readme)
+        self.assertRegex(release_notes, r"v0\.1\.1 — (Release candidate|Released)")
+        self.assertIn("v0.1.0 — First public release", release_notes)
+        self.assertNotIn("PR #", release_notes)
+        self.assertNotRegex(release_notes, r"(?i)github\.com/[^/\s]+/[^/\s]+[-_]private")
         maintainer = (ROOT / "docs/MAINTAINER-GUIDE.md").read_text(encoding="utf-8")
         self.assertIn("python3 tools/update_hashes.py", maintainer)
         self.assertEqual(HASH_MANIFEST_VERSION, version)
-        self.assertEqual(VERSION_HEADER, f"# RetroStation FX v{version} release manifest")
-        self.assertTrue(live_manifest.startswith(f"# RetroStation FX v{version} release manifest\n"))
-        self.assertTrue(package_manifest.startswith(f"# RetroStation FX v{version} release manifest\n"))
-        self.assertIn("Regenerate after any source change", live_manifest)
-        self.assertIn("Regenerate after any package file change", package_manifest)
-        self.assertTrue(any(re.match(r"^[0-9a-f]{64}\s", line) for line in live_manifest.splitlines()))
-        self.assertTrue(any(re.match(r"^[0-9a-f]{64}\s", line) for line in package_manifest.splitlines()))
+        self.assertEqual(VERSION_HEADER, f"# RetroStation FX v{version} development branch")
+        for manifest in (live_manifest, package_manifest):
+            hashes = [line for line in manifest.splitlines()
+                      if re.match(r"^[0-9a-f]{64}\\s", line)]
+            if "Static hashes are intentionally not frozen" in manifest:
+                self.assertFalse(hashes)
+            else:
+                self.assertTrue(hashes, "release manifests must contain hashes")
+
+    def test_live_source_manifest_inventory_covers_installed_artwork(self):
+        # Install copies all rsfx/*.py, static files and seasonal PNG assets.
+        # The manifest inventory must not silently omit newly added runtime
+        # modules or graphics in later releases.
+        expected = {
+            path.relative_to(ROOT).as_posix()
+            for subdir, pattern in (
+                ("app/rsfx", "*.py"),
+                ("app/rsfx/static", "*"),
+                ("app/rsfx/assets/holiday", "*.png"),
+            )
+            for path in (ROOT / subdir).glob(pattern) if path.is_file()
+        }
+        expected.update((
+            "app/adapter/rsfx-etv-adapter.py",
+            "app/tools/etv_yaml_owner.py",
+            "app/tools/selftest.py",
+            "app/requirements.txt",
+            "app/requirements.lock",
+            "app/VERSION",
+        ))
+        self.assertEqual(
+            expected, set(LIVE_PATHS),
+            f"missing live hash coverage: {sorted(expected - set(LIVE_PATHS))}; "
+            f"uninstalled inventory paths: {sorted(set(LIVE_PATHS) - expected)}",
+        )
 
     def test_package_hash_generation_includes_license_and_security_policy(self):
         package_paths = {path.relative_to(ROOT).as_posix() for path in package_files()}

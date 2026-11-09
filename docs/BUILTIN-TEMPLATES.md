@@ -1,6 +1,6 @@
 # Built-in FX Templates
 
-RetroStation FX v0.1.0 includes an immutable built-in broadcast graphics catalog.
+RetroStation FX v0.1.0 ships nine immutable broadcast templates. The v0.1.1 release candidate adds a tenth template, **Holiday Broadcast**, without changing the original nine or saved Styles.
 
 Built-in templates are product content, not active Styles. Browsing or previewing a template does not create an ErsatzTV Script Graphics YAML file and does not require an ErsatzTV restart.
 
@@ -17,6 +17,7 @@ Built-in templates are product content, not active Styles. Browsing or previewin
 | Movie Channel | Movie channel | Restrained cinematic title treatment |
 | Sports Info Banner | Sports | Compact segmented sports-broadcast information banner |
 | Modern Minimal | Modern minimal | Flat contemporary presentation with minimal ornamentation |
+| **Holiday Broadcast** *(v0.1.1)* | Seasonal movie channel | Thanksgiving, Christmas and New Year's artwork with deterministic per-program variants, NOW/NEXT and optional channel plaque |
 
 The designs are original RSFX broadcast-inspired treatments. They are not intended to reproduce a specific network's protected branding or graphics package.
 
@@ -38,8 +39,20 @@ Built-in templates live outside the SQLite `styles` table and have stable string
 
 The `Appearance.theme` property selects the visual composition used by both the browser preview and the Packet v1 renderer. Existing Styles that predate the template catalog default to `classic-cable`.
 
+## Holiday Broadcast (v0.1.1)
+
+Holiday Broadcast is a built-in template, not an asset-upload facility.
+Automatic or manual holiday selection, decorations on/off, independent
+channel-name/NOW/NEXT visibility, and stable per-program artwork work through
+the same Pillow/Packet v1 renderer. Turning off channel name removes the
+entire plaque; NOW/NEXT switches also remove their own badges and divider
+strokes. Each complete seasonal illustration fits within transparent margins
+(no artificial edge fade).
+
+See [Holiday Broadcast](HOLIDAY-BROADCAST.md) for its calendar, visual behavior
+and preview requirements. The built-in design uses packaged seasonal artwork;
+user-supplied image uploads are not supported in this version.
+
 ## v0.1.0 boundary
 
-The initial release ships one baseline design for each template family. Additional variants such as Compact, Standard, Wide, title-card, or alternate lower-third arrangements can be added after live validation establishes which layouts deserve permanent catalog entries.
-
-User-owned template cloning and saving are planned for a future release and are not included in v0.1.0.
+The initial release shipped one baseline design for each original template family. Its historical catalog is preserved alongside the additional built-in seasonal design.

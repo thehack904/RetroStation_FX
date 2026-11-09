@@ -96,6 +96,37 @@ format: Packet
         )
         self.assertTrue(run.call_args_list[1].kwargs["pass_fds"])
 
+    def test_preserves_existing_group_mask_bits_during_handoff(self):
+        acl = "user::rw-\ngroup::r-x\nmask::rwx\nother::---\n"
+        with (
+            patch(
+                "tools.etv_yaml_owner.subprocess.run",
+                side_effect=[
+                    self.getfacl_result(acl),
+                    subprocess.CompletedProcess([], 0),
+                ],
+            ) as run,
+            patch("tools.etv_yaml_owner.os.fchown"),
+        ):
+            handoff_yaml_ownership(self.managed_file, self.config)
+
+        self.assertIn("m::rwx", run.call_args_list[1].args[0][2])
+
+    def test_refuses_handoff_that_would_widen_group_permissions(self):
+        acl = "user::rw-\ngroup::rw-\nmask::r--\nother::---\n"
+        with (
+            patch(
+                "tools.etv_yaml_owner.subprocess.run",
+                return_value=self.getfacl_result(acl),
+            ) as run,
+            patch("tools.etv_yaml_owner.os.fchown") as fchown,
+        ):
+            with self.assertRaisesRegex(ValueError, "broaden owning-group access"):
+                handoff_yaml_ownership(self.managed_file, self.config)
+
+        run.assert_called_once()
+        fchown.assert_not_called()
+
     def test_acl_utilities_do_not_use_path_lookup(self):
         with (
             patch(

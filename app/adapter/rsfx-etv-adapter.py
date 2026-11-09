@@ -69,6 +69,36 @@ def channelish_values(context):
 
 
 
+def channel_name_from_context(context):
+    """Resolve station identity without promoting a current EPG title."""
+    # Prefer true station fields over ambiguous title aliases regardless of
+    # the order in which ErsatzTV presents keys in its JSON payload.
+    channel_name = first_value(
+        context, "channel_name", "channelName", "Channel_Name", "ChannelName",
+    )
+    if not channel_name:
+        channel_name = first_value(
+            context, "channel_title", "channelTitle",
+            "Channel_Title", "ChannelTitle",
+        )
+    epg = context.get("Epg") or []
+    playing = (
+        epg[0] if isinstance(epg, list) and epg
+        and isinstance(epg[0], dict) else {}
+    )
+    movie_titles = (
+        playing.get("Title"), playing.get("SubTitle"),
+        context.get("MediaItem_ShowTitle"), context.get("MediaItem_Title"),
+    )
+    if channel_name and any(
+        channel_name.strip().casefold() == str(title).strip().casefold()
+        for title in movie_titles if title
+    ):
+        return ""
+    return channel_name
+
+
+
 def render_endpoint(base_url):
     """Accept HTTP(S) RSFX endpoints only; reject ambiguous authority and path."""
     url = urlsplit(base_url)
@@ -131,17 +161,7 @@ def main():
             "channel",
             "Channel",
         )
-        channel_name = first_value(
-            context,
-            "channel_name",
-            "channelName",
-            "Channel_Name",
-            "ChannelName",
-            "channel_title",
-            "channelTitle",
-            "Channel_Title",
-            "ChannelTitle",
-        )
+        channel_name = channel_name_from_context(context)
 
         if not channel_id and not first_value(context, "Channel_StartTime"):
             keys = diagnostic_keys(context)

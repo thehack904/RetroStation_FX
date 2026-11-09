@@ -94,6 +94,32 @@ def validate_managed_yaml(content: bytes, config: dict[str, str | None]) -> None
         raise ValueError("managed YAML rendering values are invalid")
 
 
+def _service_yaml_acl_mask(acl: str) -> str:
+    group_perms = None
+    mask = None
+    for line in acl.splitlines():
+        if line.startswith("group::"):
+            group_perms = line.split(":", 2)[2]
+        elif line.startswith("mask::"):
+            mask = line.split(":", 2)[2]
+    if group_perms is None:
+        raise ValueError("managed YAML owning-group ACL is unavailable")
+
+    current_mask = mask or group_perms
+    desired_mask = "".join(
+        permission if permission in current_mask or permission in "rw" else "-"
+        for permission in "rwx"
+    )
+    if any(
+        permission in desired_mask
+        and permission in group_perms
+        and permission not in current_mask
+        for permission in "rwx"
+    ):
+        raise ValueError("managed YAML ACL mask repair would broaden owning-group access")
+    return desired_mask
+
+
 def handoff_yaml_ownership(path: Path, config_file: Path = CONFIG_FILE) -> None:
     config = dotenv_values(config_file)
     script_dir_value = config.get("RSFX_ETV_SCRIPT_DIR") or (
@@ -147,12 +173,13 @@ def handoff_yaml_ownership(path: Path, config_file: Path = CONFIG_FILE) -> None:
                 if name and not (entry_type == "user" and name == "retrostation-fx"):
                     raise ValueError("managed YAML has unrelated named ACL entries")
 
+        mask = _service_yaml_acl_mask(acl)
         os.fchown(fd, owner_uid, owner_gid)
         subprocess.run(
             [
                 "/usr/bin/setfacl",
                 "-m",
-                "u:retrostation-fx:rw-,m::rw-",
+                f"u:retrostation-fx:rw-,m::{mask}",
                 f"/proc/self/fd/{fd}",
             ],
             check=True,

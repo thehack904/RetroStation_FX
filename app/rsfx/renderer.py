@@ -6,6 +6,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .packet import full_packet, repeat_packet, clear_packet
 from .compositions import get_composition
+from .holiday import host_date, select_artwork, scaled_asset, ARTWORK
+from .holiday_decor import scaled_corner_art
 
 
 @dataclass
@@ -15,15 +17,23 @@ class RenderStats:
     region: tuple[int, int, int, int]
 
 
-def _font(size, bold=False):
-    choices = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    ]
+def _font(size, bold=False, serif=False):
+    if serif:
+        choices = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+            if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf"
+            if bold else "/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf",
+        ]
+    else:
+        choices = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
+            if bold
+            else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        ]
 
     for path in choices:
         try:
@@ -190,6 +200,7 @@ def _fit_wrapped_text(
     minimum_size,
     bold=False,
     max_height=None,
+    serif=False,
 ):
     """
     Fit text using this priority:
@@ -241,10 +252,7 @@ def _fit_wrapped_text(
         minimum_size - 1,
         -1,
     ):
-        font = _font(
-            size,
-            bold,
-        )
+        font = _font(size, bold, serif)
 
         lines = _wrap_words(
             draw,
@@ -269,10 +277,7 @@ def _fit_wrapped_text(
     # At the configured minimum, preserve as much text as possible
     # and ellipsize the final visible line if necessary.
     #
-    font = _font(
-        minimum_size,
-        bold,
-    )
+    font = _font(minimum_size, bold, serif)
 
     lines = _wrap_words(
         draw,
@@ -314,10 +319,7 @@ def _fit_wrapped_text(
         hard_floor - 1,
         -1,
     ):
-        font = _font(
-            size,
-            bold,
-        )
+        font = _font(size, bold, serif)
 
         lines = _wrap_words(
             draw,
@@ -348,10 +350,7 @@ def _fit_wrapped_text(
     # should never be reached, but return a bounded value rather than
     # reverting to unbounded text.
     #
-    font = _font(
-        hard_floor,
-        bold,
-    )
+    font = _font(hard_floor, bold, serif)
 
     lines = _wrap_words(
         draw,
@@ -389,7 +388,7 @@ def _region(ch, n):
     )
 
     preferred_h = int(
-        largest_text * 4.75
+        largest_text * (7.25 if ch.appearance.theme == "holiday-broadcast" else 4.75)
     )
 
     mx = max(8, int(n.width * 0.035))
@@ -487,6 +486,7 @@ def _frame(
     region,
     style,
     phase,
+    holiday_choice=None,
 ):
     _, _, w, h = region
 
@@ -563,7 +563,153 @@ def _frame(
 
     composition = get_composition(ch.appearance.theme)
     palette = _palette(accent, background_alpha, foreground_alpha, muted_alpha)
+    if ch.appearance.theme == "holiday-broadcast":
+        if holiday_choice is None:
+            holiday_choice = select_artwork(ch.appearance.holiday_theme, n.program_key)
+        holiday_theme, _holiday_asset = holiday_choice
+        holiday_colors = {
+            "thanksgiving": ((60, 29, 18), (247, 172, 83)),
+            "christmas": ((10, 40, 30), (227, 188, 103)),
+            "new-year": ((14, 24, 48), (239, 201, 120)),
+            "neutral": ((27, 31, 42), (200, 204, 213)),
+        }
+        panel_color, gold_color = holiday_colors[holiday_theme]
+        palette["dark"] = (*panel_color, background_alpha)
+        palette["navy"] = (*panel_color, background_alpha)
+        palette["accent"] = (*gold_color, foreground_alpha)
+        palette["accent_soft"] = (*gold_color, int(foreground_alpha * 0.65))
+        palette["light"] = (255, 247, 229, foreground_alpha)
+        palette["muted"] = (234, 219, 192, muted_alpha)
+    if (
+        ch.appearance.theme == "holiday-broadcast"
+        and not ch.appearance.show_channel_label
+    ):
+        # The plaque is a real structural element, not merely text.
+        # Remove its fill as well as its frame and embellishments when hidden.
+        panels = composition.get("panels", [])
+        composition = {
+            **composition,
+            "panels": [
+                panel for index, panel in enumerate(panels)
+                if index != 1
+            ],
+        }
     _draw_composition(draw, w, h, composition, palette)
+    if ch.appearance.theme == "holiday-broadcast":
+        # Premium broadcast frame. The central NOW/NEXT columns are isolated
+        # from ornaments and labels by the declarative text-safe regions.
+        edge = palette["accent"]
+        soft = palette["accent_soft"]
+        draw.rounded_rectangle(
+            (int(w*.054), int(h*.20), int(w*.946), int(h*.934)),
+            radius=max(7, int(h*.048)), outline=edge,
+            width=max(2, int(h*.009)),
+        )
+        # Pinstripes and hairlines are confined to the information panel.
+        draw.line(
+            (int(w*.240), int(h*.646), int(w*.810), int(h*.646)),
+            fill=soft, width=max(1, int(h*.005)),
+        )
+        if ch.appearance.show_now:
+            draw.line(
+                (int(w*.325), int(h*.338), int(w*.325), int(h*.602)),
+                fill=soft, width=max(1, int(h*.005)),
+            )
+        if ch.appearance.show_next:
+            draw.line(
+                (int(w*.325), int(h*.686), int(w*.325), int(h*.826)),
+                fill=soft, width=max(1, int(h*.005)),
+            )
+        # Gold inset and channel plaque filigree echo the approved mockups.
+        draw.rounded_rectangle(
+            (int(w*.065), int(h*.218), int(w*.935), int(h*.919)),
+            radius=max(5,int(h*.038)), outline=soft,
+            width=max(1,int(h*.004)),
+        )
+        # The channel plaque is the foreground layer. Draw its *fill* after
+        # both main-panel border strokes so those strokes cannot show through
+        # its translucent interior. ImageDraw writes RGBA pixels directly here,
+        # rather than alpha-compositing the old border into the plaque.
+        if ch.appearance.show_channel_label:
+            draw.rounded_rectangle(
+                (int(w*.288), int(h*.022), int(w*.712), int(h*.251)),
+                radius=max(5, int(h*.045)),
+                fill=palette["navy"],
+                outline=edge,
+                width=max(2, int(h*.009)),
+            )
+        if ch.appearance.show_channel_label:
+            for cx in (int(w*.311), int(w*.689)):
+                cy = int(h*.135)
+                rr = max(4, int(h*.024))
+                draw.polygon(
+                    [(cx,cy-rr),(cx+rr*.3,cy-rr*.3),(cx+rr,cy),
+                     (cx+rr*.3,cy+rr*.3),(cx,cy+rr),
+                     (cx-rr*.3,cy+rr*.3),(cx-rr,cy),
+                     (cx-rr*.3,cy-rr*.3)],
+                    fill=edge,
+                )
+        if ch.appearance.show_now:
+            draw.rounded_rectangle(
+                (int(w*.227),int(h*.374),int(w*.322),int(h*.540)),
+                radius=max(3,int(h*.021)), outline=edge,
+                fill=(*panel_color,background_alpha),
+                width=max(1,int(h*.007)),
+            )
+        if ch.appearance.show_next:
+            draw.rounded_rectangle(
+                (int(w*.227),int(h*.691),int(w*.322),int(h*.844)),
+                radius=max(3,int(h*.021)), outline=edge,
+                fill=(*panel_color,background_alpha),
+                width=max(1,int(h*.007)),
+            )
+        if ch.appearance.show_now:
+            draw.text(
+                (int(w*.242), int(h*.402)), "NOW",
+                font=_font(max(13, int(h*.099)), True), fill=edge,
+            )
+        if ch.appearance.show_next:
+            draw.text(
+                (int(w*.242), int(h*.722)), "NEXT",
+                font=_font(max(12, int(h*.086)), True), fill=edge,
+            )
+        if ch.appearance.holiday_decorations:
+            season, asset_id = holiday_choice
+            if asset_id is not None:
+                art_index = ARTWORK[season].index(asset_id)
+                # Keep the ornament outside the title/badge safe zones, but
+                # inside the region's hard clipping edge. The scaled art also
+                # feathers its outer alpha (see holiday_decor.py), so no
+                # illustration ends at a straight vertical cut.
+                inset = max(3, int(w * .009))
+                aw = max(30, min(int(w * .212), 360))
+                ah = max(25, min(int(h * .79), 240))
+                for side, x_art in (
+                    ("left", inset),
+                    ("right", w - inset - aw),
+                ):
+                    art = scaled_corner_art(
+                        season, art_index, side, aw, ah, foreground_alpha
+                    )
+                    im.alpha_composite(art, (max(0,x_art), max(0,int(h*.155))))
+                # Retain all twelve original, packaged per-program PNG
+                # variations as small accent details in the art-only gutters.
+                detail_size = max(10,min(int(h*.22),int(w*.057),64))
+                accent_asset = scaled_asset(
+                    season, asset_id, detail_size, foreground_alpha
+                )
+                im.alpha_composite(
+                    accent_asset,
+                    (int(w*.078), int(h*.72)),
+                )
+                companion = ARTWORK[season][(art_index + 1) % len(ARTWORK[season])]
+                accent_right = scaled_asset(
+                    season, companion, detail_size, foreground_alpha
+                )
+                im.alpha_composite(
+                    accent_right,
+                    (w-int(w*.078)-detail_size, int(h*.72)),
+                )
 
     regions = composition.get("regions", {})
 
@@ -605,6 +751,7 @@ def _frame(
             minimum_size=channel_minimum,
             bold=True,
             max_height=rh,
+            serif=(ch.appearance.theme == 'holiday-broadcast'),
         )
 
         label = label_lines[0]
@@ -667,13 +814,9 @@ def _frame(
             ),
         )
 
-        now_text = (
-            "NOW  "
-            + (
-                n.current_title
-                or "Programming"
-            )
-        )
+        now_text = (n.current_title or "Programming")
+        if ch.appearance.theme != "holiday-broadcast":
+            now_text = "NOW  " + now_text
 
         now_font, now_lines = _fit_wrapped_text(
             draw=draw,
@@ -684,6 +827,7 @@ def _frame(
             minimum_size=now_minimum,
             bold=True,
             max_height=rh,
+            serif=(ch.appearance.theme == 'holiday-broadcast'),
         )
 
         line_h = _line_height(
@@ -770,13 +914,9 @@ def _frame(
             ),
         )
 
-        next_text = (
-            "NEXT  "
-            + (
-                n.next_title
-                or "To Be Announced"
-            )
-        )
+        next_text = (n.next_title or "To Be Announced")
+        if ch.appearance.theme != "holiday-broadcast":
+            next_text = "NEXT  " + next_text
 
         next_font, next_lines = _fit_wrapped_text(
             draw=draw,
@@ -787,6 +927,7 @@ def _frame(
             minimum_size=next_minimum,
             bold=False,
             max_height=rh,
+            serif=(ch.appearance.theme == 'holiday-broadcast'),
         )
 
         line = next_lines[0]
@@ -825,6 +966,14 @@ def _frame(
             ),
         )
 
+
+    if ch.appearance.theme == "holiday-broadcast" and alpha < 1.0:
+        # Drawing + RGBA compositing can otherwise increase effective opacity
+        # where decorations overlap the semi-transparent panel. Clamp the
+        # finished image to the user-selected fade/opacity ceiling.
+        limit = max(0, min(255, int(alpha * 255)))
+        im.putalpha(im.getchannel("A").point(lambda value: min(value, limit)))
+
     if lx or ly:
         canvas = Image.new(
             "RGBA",
@@ -845,6 +994,11 @@ def _frame(
     )
 
 def render_packet_stream(ch, n):
+    # Freeze the holiday date and program choice for the entire overlay.
+    holiday_choice = (
+        select_artwork(ch.appearance.holiday_theme, n.program_key, today=host_date())
+        if ch.appearance.theme == "holiday-broadcast" else None
+    )
     region = _region(ch, n)
     x, y, w, h = region
 
@@ -1013,6 +1167,7 @@ def render_packet_stream(ch, n):
                         region,
                         enter_style,
                         "enter",
+                        holiday_choice,
                     ),
                 )
             )
@@ -1031,6 +1186,7 @@ def render_packet_stream(ch, n):
                     region,
                     "none",
                     "enter",
+                    holiday_choice,
                 ),
             )
         )
@@ -1083,6 +1239,7 @@ def render_packet_stream(ch, n):
                         region,
                         exit_style,
                         "exit",
+                        holiday_choice,
                     ),
                 )
             )

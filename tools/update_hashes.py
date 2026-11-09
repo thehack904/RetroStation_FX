@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 VERSION = (ROOT / "app/VERSION").read_text(encoding="utf-8").strip()
-VERSION_HEADER = f"# RetroStation FX v{VERSION} release manifest"
+VERSION_HEADER = f"# RetroStation FX v{VERSION} development branch"
+RELEASE_HEADER = f"# RetroStation FX v{VERSION} verified release archive"
 
 LIVE_PATHS = [
     "app/rsfx/__init__.py",
     "app/rsfx/app.py",
     "app/rsfx/compositions.py",
     "app/rsfx/config.py",
+    "app/rsfx/holiday.py",
+    "app/rsfx/holiday_decor.py",
     "app/rsfx/database.py",
     "app/rsfx/ersatztv.py",
+    "app/rsfx/ersatztv_refresh.py",
     "app/rsfx/ersatztv_restart.py",
     "app/rsfx/models.py",
     "app/rsfx/normalize.py",
@@ -27,6 +32,18 @@ LIVE_PATHS = [
     "app/rsfx/static/index.html",
     "app/rsfx/static/app.js",
     "app/rsfx/static/style.css",
+    "app/rsfx/assets/holiday/acorns.png",
+    "app/rsfx/assets/holiday/autumn-leaves.png",
+    "app/rsfx/assets/holiday/confetti.png",
+    "app/rsfx/assets/holiday/evergreen.png",
+    "app/rsfx/assets/holiday/fireworks.png",
+    "app/rsfx/assets/holiday/gold-stars.png",
+    "app/rsfx/assets/holiday/harvest-wreath.png",
+    "app/rsfx/assets/holiday/holly.png",
+    "app/rsfx/assets/holiday/midnight-clock.png",
+    "app/rsfx/assets/holiday/ornament.png",
+    "app/rsfx/assets/holiday/pumpkin.png",
+    "app/rsfx/assets/holiday/snowflake.png",
     "app/adapter/rsfx-etv-adapter.py",
     "app/tools/selftest.py",
     "app/tools/etv_yaml_owner.py",
@@ -55,14 +72,19 @@ def installed_path(relative: str) -> str:
     return relative
 
 
-def write_live() -> None:
+def write_live(*, release: bool = False) -> None:
     lines = [
-        VERSION_HEADER,
+        RELEASE_HEADER if release else VERSION_HEADER,
         "# Current installed-source hashes",
-        "# Regenerate with: python3 tools/update_hashes.py",
-        "# Regenerate after any source change and before release packaging.",
-        "",
+        "# SHA-256 checksums of the exact application files in this archive."
+        if release else "# Regenerate with: python3 tools/update_hashes.py",
     ]
+    if not release:
+        lines.extend([
+            "# Static hashes are intentionally not frozen on the development branch.",
+            "# Release/frozen packaging must commit the generated hashes.",
+        ])
+    lines.append("")
     for relative in LIVE_PATHS:
         path = ROOT / relative
         if not path.is_file():
@@ -72,12 +94,22 @@ def write_live() -> None:
 
 
 def package_files() -> list[Path]:
+    # Respect the same export-ignore inventory used by git archive. Generating
+    # manifests from a development checkout must never list an internal file
+    # that is absent from the public source archive.
+    ignored: set[str] = set()
+    attributes = ROOT / ".gitattributes"
+    if attributes.is_file():
+        for line in attributes.read_text(encoding="utf-8").splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[1] == "export-ignore":
+                ignored.add(fields[0])
     result: list[Path] = []
     for path in ROOT.rglob("*"):
         if not path.is_file():
             continue
         relative = path.relative_to(ROOT).as_posix()
-        if relative.startswith(".git/") or relative in EXCLUDE_PACKAGE:
+        if relative.startswith(".git/") or relative in EXCLUDE_PACKAGE or relative in ignored:
             continue
         if "__pycache__" in path.parts or path.suffix == ".pyc":
             continue
@@ -85,14 +117,16 @@ def package_files() -> list[Path]:
     return sorted(result, key=lambda p: p.relative_to(ROOT).as_posix())
 
 
-def write_package() -> None:
+def write_package(*, release: bool = False) -> None:
     lines = [
-        VERSION_HEADER,
-        "# Regenerate with: python3 tools/update_hashes.py",
+        RELEASE_HEADER if release else VERSION_HEADER,
+        "# SHA-256 checksums of the exact exported source files."
+        if release else "# Regenerate with: python3 tools/update_hashes.py",
         "# PACKAGE-SHA256.txt excludes itself.",
-        "# Regenerate after any package file change and before release packaging.",
-        "",
     ]
+    if not release:
+        lines.append("# Static hashes are intentionally not frozen on the development branch.")
+    lines.append("")
     for path in package_files():
         relative = path.relative_to(ROOT).as_posix()
         lines.append(f"{sha256(path)}  ./{relative}")
@@ -100,8 +134,12 @@ def write_package() -> None:
 
 
 def main() -> None:
-    write_live()
-    write_package()
+    parser = argparse.ArgumentParser(description="Generate RSFX source checksums")
+    parser.add_argument("--release", action="store_true",
+                        help="Label manifests for a frozen release archive")
+    args = parser.parse_args()
+    write_live(release=args.release)
+    write_package(release=args.release)
     print("Updated docs/LIVE-SOURCE-SHA256.txt")
     print("Updated docs/PACKAGE-SHA256.txt")
 

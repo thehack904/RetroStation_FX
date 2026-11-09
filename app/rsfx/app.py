@@ -2,21 +2,24 @@ from __future__ import annotations
 
 import time
 import logging
+from io import BytesIO
+from PIL import Image
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Response
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Response, Query
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from . import __version__
 from .config import settings
 from .database import Database, sanitize_diagnostic_error
-from .ersatztv import delete_yaml, sync_yaml
+from .ersatztv import YamlFilesystemPermissionError, delete_yaml, sync_yaml
 from .ersatztv_refresh import GraphicsRefreshError, request_graphics_refresh, discover_channels, manual_command_info
 from .ersatztv_restart import detect_ersatztv_start
 from .models import RenderRequest, Style, StylePut, UserTemplate, UserTemplatePut
 from .normalize import normalize_context
-from .renderer import render_boundary_packet_stream, render_packet_stream
+from .holiday import asset_path, select_artwork, host_date
+from .renderer import _frame, _region, render_boundary_packet_stream, render_packet_stream
 from .timeline import build_position_timeline, plan_position_trigger
 from .templates import get_template, list_templates
 from .trigger import claim_position_schedule, evaluate_trigger
@@ -29,6 +32,76 @@ app=FastAPI(title='RetroStation FX',version=__version__,lifespan=lifespan)
 static_dir=Path(__file__).parent/'static'; app.mount('/static',StaticFiles(directory=static_dir),name='static')
 @app.get('/',response_class=HTMLResponse)
 def home(): return (static_dir/'index.html').read_text(encoding='utf-8')
+@app.get('/v1/holiday/selection')
+def holiday_selection(
+    theme: str = Query(default='automatic', max_length=32),
+    program_key: str = Query(default='preview:holiday-vault', max_length=512),
+):
+    try:
+        season, asset = select_artwork(theme, program_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail='Invalid holiday selection') from exc
+    return {'holiday': season, 'asset': asset}
+
+
+@app.get('/v1/holiday/artwork/{theme}/{asset}')
+def holiday_artwork(theme: str, asset: str):
+    try:
+        path = asset_path(theme, asset)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail='Unknown holiday artwork') from exc
+    if not path.is_file():
+        raise HTTPException(status_code=503, detail='Bundled artwork is not installed')
+    return FileResponse(path, media_type='image/png', headers={
+        'Cache-Control': 'public, max-age=86400',
+        'X-Content-Type-Options': 'nosniff',
+    })
+
+
+@app.post('/v1/holiday/preview')
+def holiday_preview(
+    style: StylePut,
+    width: int = Query(default=1280, ge=1, le=1280),
+    height: int = Query(default=720, ge=1, le=720),
+):
+    """Pixel-identical still frame from the same Pillow/Packet v1 renderer.
+
+    Does not save a Style, create managed YAML, or contact ErsatzTV.
+    """
+    if style.appearance.theme != 'holiday-broadcast':
+        raise HTTPException(status_code=422, detail='Holiday Broadcast theme required')
+    if (width, height) not in {(640, 480), (1280, 720)}:
+        raise HTTPException(status_code=422, detail='Unsupported preview resolution')
+    season, artwork = select_artwork(
+        style.appearance.holiday_theme, 'preview:holiday-vault', today=host_date()
+    )
+    samples = {
+        'thanksgiving': ('Planes, Trains and Automobiles', 'A Charlie Brown Thanksgiving'),
+        'christmas': ('White Christmas', 'Miracle on 34th Street'),
+        'new-year': ('When Harry Met Sally', 'The Apartment'),
+        'neutral': ('The Holiday', 'Home for the Holidays'),
+    }
+    current, upcoming = samples[season]
+    n = normalize_context(
+        '', 'HOLIDAY VAULT',
+        {'FrameRate': 30, 'Resolution': {'Width': width, 'Height': height},
+         'Epg': [{'Title': current, 'Start': 'sample-program-start'},
+                 {'Title': upcoming}]},
+    )
+    region = _region(style, n)
+    try:
+        buffer = _frame(style, n, 1.0, region, 'none', 'enter', (season, artwork))
+        image = Image.frombytes('RGBA', region[2:], buffer, 'raw', 'BGRA')
+        output = BytesIO()
+        image.save(output, format='PNG')
+    except (ValueError, OSError) as exc:
+        logger.exception('Holiday preview rendering failed')
+        raise HTTPException(status_code=500, detail='Holiday preview rendering failed') from exc
+    return Response(output.getvalue(), media_type='image/png', headers={
+        'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    })
+
+
 @app.get('/v1/health')
 def health(): return {'ok':True,'version':__version__,'packet_mode':True}
 @app.get('/v1/capabilities')
@@ -123,6 +196,27 @@ def remove_user_template(template_id:int):
     }
 
 
+def _yaml_sync_error(
+    exc: Exception,
+    *,
+    saved: bool,
+) -> HTTPException:
+    """Return actionable but non-sensitive YAML deployment failures."""
+    if isinstance(exc, YamlFilesystemPermissionError):
+        message = (
+            'YAML deployment blocked by filesystem permissions. '
+            'Check RSFX service-account traversal, effective ACL masks, and '
+            'write access to the configured ErsatzTV Script Graphics directory; '
+            'rerun the RSFX installer/upgrade to repair its scoped ACLs.'
+        )
+    else:
+        # Do not disclose internal paths, helper responses, or configuration.
+        message = 'YAML deployment failed. Inspect RSFX service logs for details.'
+    if saved:
+        message = 'Style saved locally, but ' + message
+    return HTTPException(status_code=500, detail=message)
+
+
 @app.get('/v1/styles',response_model=list[Style])
 def list_styles(): return db.list_styles()
 @app.post('/v1/styles/match')
@@ -136,9 +230,13 @@ def create_style(value:StylePut):
         if match:return match
     style=db.put_style(value)
     try:
-        path=sync_yaml(style); db.set_style_yaml_path(style.id,str(path) if path else None)
+        path=sync_yaml(style)
+    except Exception as exc:
+        raise _yaml_sync_error(exc, saved=True) from exc
+    try:
+        db.set_style_yaml_path(style.id,str(path) if path else None)
         if path:db.mark_yaml_changed()
-    except Exception as exc: raise HTTPException(500,f'style saved but YAML sync failed: {exc}')
+    except Exception as exc: raise _yaml_sync_error(exc, saved=True) from exc
     return db.get_style(style.id)
 @app.get('/v1/styles/{style_id}',response_model=Style)
 def get_style(style_id:int):
@@ -150,9 +248,13 @@ def update_style(style_id:int,value:StylePut):
     if db.get_style(style_id) is None:raise HTTPException(404,'style not found')
     s=db.put_style(value,style_id=style_id)
     try:
-        path=sync_yaml(s); db.set_style_yaml_path(s.id,str(path) if path else None)
+        path=sync_yaml(s)
+    except Exception as exc:
+        raise _yaml_sync_error(exc, saved=True) from exc
+    try:
+        db.set_style_yaml_path(s.id,str(path) if path else None)
         if path:db.mark_yaml_changed()
-    except Exception as exc:raise HTTPException(500,f'style saved but YAML sync failed: {exc}')
+    except Exception as exc: raise _yaml_sync_error(exc, saved=True) from exc
     return db.get_style(s.id)
 @app.delete('/v1/styles/{style_id}')
 def remove_style(style_id:int):
@@ -165,8 +267,15 @@ def remove_style(style_id:int):
 def sync_style(style_id:int):
     s=db.get_style(style_id)
     if s is None:raise HTTPException(404,'style not found')
-    p=sync_yaml(s); db.set_style_yaml_path(style_id,str(p) if p else None)
-    if p:db.mark_yaml_changed()
+    try:
+        p=sync_yaml(s)
+    except Exception as exc:
+        raise _yaml_sync_error(exc, saved=False) from exc
+    try:
+        db.set_style_yaml_path(style_id,str(p) if p else None)
+        if p:db.mark_yaml_changed()
+    except Exception as exc:
+        raise _yaml_sync_error(exc, saved=False) from exc
     return {'ok':True,'path':str(p) if p else None,'ersatztv_restart_required':bool(p)}
 @app.post('/v1/styles/{style_id}/refresh-ersatztv')
 def refresh_style_graphics(style_id: int, payload: dict | None = None):
@@ -210,6 +319,47 @@ def _request_ersatztv_sync(payload: dict | None) -> dict:
         raise HTTPException(502, str(exc)) from exc
 
 
+def _holiday_runtime_channel_name(req, style, context: dict) -> str:
+    """Return a trustworthy channel label, never the currently playing title.
+
+    Legacy ErsatzTV does not always supply a channel display name. In
+    particular, older adapter payloads may carry Channel_Title (the *program*
+    title) in the channel_name slot. Keep channel/movie identities separate.
+    """
+    epg = context.get('Epg') or []
+    current = epg[0] if isinstance(epg, list) and epg and isinstance(epg[0], dict) else {}
+    program_names = {
+        str(value).strip().casefold()
+        for value in (
+            current.get('Title'), current.get('SubTitle'),
+            context.get('MediaItem_ShowTitle'), context.get('MediaItem_Title'),
+        )
+        if value
+    }
+    # Prefer the explicit, user-set channel label when supplied. The renderer
+    # handles that exact override independently of runtime metadata.
+    override = (style.appearance.channel_label_text or '').strip()
+    if override:
+        return override
+
+    # Explicit channel-name fields are preferred to ambiguous title aliases.
+    candidates = (
+        context.get('Channel_Name'), context.get('ChannelName'),
+        context.get('channel_name'), context.get('channelName'),
+        req.channel_name,
+    )
+    for candidate in candidates:
+        if candidate is None or isinstance(candidate, (dict, list)):
+            continue
+        value = str(candidate).strip()
+        if value and value.casefold() not in program_names:
+            return value[:160]
+
+    # If ErsatzTV exposes only a channel ID, a custom Style name is a
+    # more useful on-screen fallback than a changing program title.
+    return (style.display_name or 'Holiday Channel').strip()[:160]
+
+
 @app.post('/v1/render/packet')
 def render_packet(req:RenderRequest):
     seen=time.time(); style=db.get_style(req.style_id)
@@ -228,15 +378,19 @@ def render_packet(req:RenderRequest):
     else:
         state_key=f"style:{style.id}|channel:{channel_id}"
 
-    runtime_name=(req.channel_name or '').strip()
-    if not runtime_name:
-        runtime_name=str(context.get('MediaItem_ShowTitle') or '').strip()
-    if not runtime_name:
-        epg=context.get('Epg') or []
-        if epg and isinstance(epg[0],dict):
-            runtime_name=str(epg[0].get('Title') or '').strip()
-    if not runtime_name:
-        runtime_name=channel_id or style.display_name
+    if style.appearance.theme == 'holiday-broadcast':
+        runtime_name = _holiday_runtime_channel_name(req, style, context)
+    else:
+        # Preserve non-holiday template behavior for v0.1.1.
+        runtime_name=(req.channel_name or '').strip()
+        if not runtime_name:
+            runtime_name=str(context.get('MediaItem_ShowTitle') or '').strip()
+        if not runtime_name:
+            epg=context.get('Epg') or []
+            if epg and isinstance(epg[0],dict):
+                runtime_name=str(epg[0].get('Title') or '').strip()
+        if not runtime_name:
+            runtime_name=channel_id or style.display_name
 
     try:
         n=normalize_context(channel_id,runtime_name,context)

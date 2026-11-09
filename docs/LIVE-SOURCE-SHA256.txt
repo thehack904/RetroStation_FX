@@ -1,28 +1,42 @@
-# RetroStation FX v0.1.0 release manifest
+# RetroStation FX v0.1.1 verified release archive
 # Current installed-source hashes
-# Regenerate with: python3 tools/update_hashes.py
-# Regenerate after any source change and before release packaging.
+# SHA-256 checksums of the exact application files in this archive.
 
-91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed  /opt/rsfx/rsfx/__init__.py
-09234fd20e72686588a320985a016b1d5122158ad25f2c4a7a02cd622d35182e  /opt/rsfx/rsfx/app.py
-c291b644420efb9df0a8948bdbb7023486aad911588224a1f059502fee4ea6bb  /opt/rsfx/rsfx/compositions.py
+ae739b3e3b817044ada923b44ba82c752fe8b7c2133908d58fff8fd4b5146298  /opt/rsfx/rsfx/__init__.py
+e7172645df37ba9470c2f2fbb0a66b824de411bf424938e945b4bfc31365f64f  /opt/rsfx/rsfx/app.py
+92416e062a49a92b29bbf18eb9228209527dc42d78bdf13ab3b364c6e8ed74df  /opt/rsfx/rsfx/compositions.py
 6ab8626ce2eefb762c341f509a6aa35986499c75e9720eb8b5d9b729320d84af  /opt/rsfx/rsfx/config.py
+cc2ba5e5140c5253be2fd575457e57515eaf5f56558600f8937f74c9a79a63e4  /opt/rsfx/rsfx/holiday.py
+a5dacaeb2c2e7e6bd2867403b29fbf6c8f4283c44c141f84ba609260ec4226c0  /opt/rsfx/rsfx/holiday_decor.py
 b79ea1ad6e90c38c9784ae6b26450cd699871fcecc30a722509b989e983d555b  /opt/rsfx/rsfx/database.py
-a1dd775df99ec0addbe2e42b4d7a8be39f302ab168b8ab303206145834653a00  /opt/rsfx/rsfx/ersatztv.py
+551a26c9b8d9cf4ee99009557723e503e7e6b9d3a483e19491d998993b4f4aee  /opt/rsfx/rsfx/ersatztv.py
+0bf2cb58f470c9940104680e00563593265996eedfb271d01b0e89590215da30  /opt/rsfx/rsfx/ersatztv_refresh.py
 b996b496b7ea46b30b77be1d29a261d0e66cfc0ca4f792c93edaa74e46899a6a  /opt/rsfx/rsfx/ersatztv_restart.py
-72178f4776fce8cf490ec69221418733f66fdbb1c60faf1d5dd7a301210382d8  /opt/rsfx/rsfx/models.py
-d24d943d54c4df84fb27eed9015ae3d33a55cc4f87edec03fcd871c193abc903  /opt/rsfx/rsfx/normalize.py
+ba15f13c37c8223df93af484d0bbe97e6063b430fab2b23f920beb50ab44690a  /opt/rsfx/rsfx/models.py
+876ae9ba31966597468c952dc4c3877ad25a6665c0a02a312cae2657e5550718  /opt/rsfx/rsfx/normalize.py
 84b20db38a97627c123359196616ada9f8524aa30a37dcda766a27b40f8bdb65  /opt/rsfx/rsfx/packet.py
-1e3df3798e51fdb0b202c346962c72f638572677d04e128c50e9a2da12112b24  /opt/rsfx/rsfx/renderer.py
-fbc7c2bfa5c273e0a4ae58ec8d21bb99b161bb3f792fccdb1e608c6b1f99d253  /opt/rsfx/rsfx/templates.py
+d60ce6f36344adb39865b470965c62d63f8387d68c7c9d68d20e494a828f2a5e  /opt/rsfx/rsfx/renderer.py
+eef5783992d5ed5f09a96e5326b10ebf9a3b5abc6d2d056ddb4ea560bfe55cce  /opt/rsfx/rsfx/templates.py
 7e3f387d465ff174c9007e1572c5857e1b0d831400fea524f2b4542ce8c48d3d  /opt/rsfx/rsfx/timeline.py
 a68a65b1f171a1e58dc8f5d63e90a77475d6ac34c62fd202b638067a22c3a8bd  /opt/rsfx/rsfx/trigger.py
-9a01c594693f5e4a48e96ed6516d229e75dcf4ba03a627fe893e91a6da066edd  /opt/rsfx/rsfx/static/index.html
-0e595cbc94adfdf6a2c54b850ae062e87854bba33a6380061ccf699028254b6e  /opt/rsfx/rsfx/static/app.js
-509279d03a507e8463e89aca057de025886724aa065633b1ffb4485d7f0fe1c8  /opt/rsfx/rsfx/static/style.css
-614dca5b4e134108d07bd93882c1009114898c6469b58104c3be7d3e28924520  /opt/rsfx/adapter/rsfx-etv-adapter.py
+efcd8c3eda21450641ef31a7b589238de46088ea95f6329868eca42afd578259  /opt/rsfx/rsfx/static/index.html
+a0129cdc5569040ea5f01fd66023476eaf7622cc43d4d315ac4a63af36fcdf23  /opt/rsfx/rsfx/static/app.js
+b64e0280640e8f2a01300547c0ca05985caab24ae4c7b514921681879f7f1ed1  /opt/rsfx/rsfx/static/style.css
+d12d9cabe4e47678fbfc943da9e795326738cb77d5ae6f657f4fc1dad3c1cc7d  /opt/rsfx/rsfx/assets/holiday/acorns.png
+8016610942a02623c3d4920e2f829042f4c59b9eb1e56d8f79fbe6df386fa47f  /opt/rsfx/rsfx/assets/holiday/autumn-leaves.png
+3782888158d94434ae7c5282f80be08291b03336dd2fef179162f27b3a06334f  /opt/rsfx/rsfx/assets/holiday/confetti.png
+1fd606229e6dfc997fde00053fa1cbc7dd2ade39e549fc7182cd47c9c1cd10c9  /opt/rsfx/rsfx/assets/holiday/evergreen.png
+340cb5d19205c5d8b314e1b3ecfd6d4087dbd02437c782bab8ccfd83ead9161a  /opt/rsfx/rsfx/assets/holiday/fireworks.png
+8d7da43daac74ebfea009fdaa83e20646bb3eeee211322aa2a09a40f1bf262ed  /opt/rsfx/rsfx/assets/holiday/gold-stars.png
+2f2487120d7b19bc06a4ab1e8708030402e3370d53ccf615a89fe55d1951dadc  /opt/rsfx/rsfx/assets/holiday/harvest-wreath.png
+60cf2f007d67862e951c2c623f5539eec52d62f957a3927e6f966bef0c41949f  /opt/rsfx/rsfx/assets/holiday/holly.png
+259ab526a3f87d23ed9733da8fd123095c86e9c1a64214e1d75603ff83c22dc6  /opt/rsfx/rsfx/assets/holiday/midnight-clock.png
+e0dfdbf7f7424b8ea055b2eb94eca3201213563e5a117c39cfc3a76520af5dbd  /opt/rsfx/rsfx/assets/holiday/ornament.png
+744e5cd21cb3f4c98f3f497efb81d9c0f16d853a16f82aec39b649026dcdaf4c  /opt/rsfx/rsfx/assets/holiday/pumpkin.png
+04e950112d087f8c46b7f88f6db52ca1ecd17ba90831d328f11bd9a386f848b7  /opt/rsfx/rsfx/assets/holiday/snowflake.png
+69496039da28a7708e756f9dd540ea6c085bcc744628b9af5b73eb86d0c1a4af  /opt/rsfx/adapter/rsfx-etv-adapter.py
 4f00510573f795b5ede6fa8d2aa6d1bdec23bedcbb79d38552f30133d49bd956  /opt/rsfx/tools/selftest.py
-78ea842608c9cb346c0cf1e40d396e38dd36fe86e60fbbd7d84c22b5e67f55da  /opt/rsfx/tools/etv_yaml_owner.py
-0a1b273f99a5c14c6b3f0d67a725688ec3a2653c7fab84bec3f13d809034b5ac  /opt/rsfx/requirements.txt
-f71dedce7093c2e0a433a4dae7bf6bc8dff054a221021776dbf239654ca20710  /opt/rsfx/requirements.lock
-e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67  /opt/rsfx/VERSION
+fe741a61ce411e6ec91747c5cd2cb7960c5024cc681a7a99b128c37337bf98e3  /opt/rsfx/tools/etv_yaml_owner.py
+816d80f88cd9b2275e467db255bd0c5da1ecdadd5ebc3228579ddb1cd5dd2c21  /opt/rsfx/requirements.txt
+1962907d6140c1ae12ecf978a2ee1403cfa35b661be8a5071e79790481258c10  /opt/rsfx/requirements.lock
+80447316529fc62014fbaa047fb67c51ac30e32830cda370405349d8d66d196c  /opt/rsfx/VERSION

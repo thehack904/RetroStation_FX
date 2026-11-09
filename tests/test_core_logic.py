@@ -9,8 +9,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
+from PIL import Image, ImageDraw
 import yaml
 from pydantic import ValidationError
 
@@ -29,7 +31,15 @@ from rsfx.models import (
 )
 from rsfx.normalize import normalize_context
 from rsfx.packet import HEADER, MAGIC, RECTANGLES, VERSION
-from rsfx.renderer import _region, render_packet_stream
+from rsfx.renderer import (
+    _font,
+    _frame,
+    _region,
+    _text_width,
+    _truncate,
+    _wrap_words,
+    render_packet_stream,
+)
 from rsfx.templates import BUILTIN_TEMPLATES
 from rsfx.trigger import claim_position_schedule, evaluate_trigger
 
@@ -41,6 +51,78 @@ class CoreLogicTests(unittest.TestCase):
         self.root = Path(self.directory.name)
         self.db = Database(self.root / "rsfx.db")
         self.db.initialize()
+
+    def test_create_style_scopes_permission_diagnostics_to_yaml_sync(self):
+        style = SimpleNamespace(id=123)
+        value = StylePut(name="Permission diagnostics")
+        db = Mock()
+        db.put_style.return_value = style
+
+        with (
+            patch.object(app_module, "db", db),
+            patch.object(
+                app_module,
+                "sync_yaml",
+                side_effect=etv.YamlFilesystemPermissionError("/private/script-graphics"),
+            ),
+        ):
+            with self.assertRaises(app_module.HTTPException) as raised:
+                app_module.create_style(value)
+
+        self.assertIn("filesystem permissions", raised.exception.detail)
+        self.assertNotIn("/private/script-graphics", raised.exception.detail)
+        db.set_style_yaml_path.assert_not_called()
+
+        db.reset_mock()
+        db.put_style.return_value = style
+        with (
+            patch.object(app_module, "db", db),
+            patch.object(app_module, "sync_yaml", return_value=self.root / "style.yml"),
+        ):
+            db.set_style_yaml_path.side_effect = PermissionError("/private/database")
+            with self.assertRaises(app_module.HTTPException) as raised:
+                app_module.create_style(value)
+
+        self.assertNotIn("filesystem permissions", raised.exception.detail)
+        self.assertNotIn("/private/database", raised.exception.detail)
+
+    def test_owner_handoff_permission_is_not_a_directory_acl_failure(self):
+        style = self.db.put_style(
+            StylePut(name="Owner socket permission", manage_ersatztv_yaml=True)
+        )
+        settings = SimpleNamespace(
+            ersatztv_script_dir=self.root,
+            version="0.1.1",
+            adapter_python="/opt/rsfx/venv/bin/python",
+            adapter_path="/opt/rsfx/adapter/rsfx-etv-adapter.py",
+            public_url="http://127.0.0.1:5055",
+        )
+        with (
+            patch.object(etv, "settings", settings),
+            patch.object(Path, "write_text", side_effect=PermissionError("/private/style.yml")),
+        ):
+            with self.assertRaises(etv.YamlFilesystemPermissionError):
+                etv.sync_yaml(style)
+
+        with (
+            patch.object(etv, "settings", settings),
+            patch.object(
+                etv,
+                "handoff_yaml_ownership",
+                side_effect=PermissionError("/run/retrostation-fx-etv-yaml-owner.sock"),
+            ),
+        ):
+            with self.assertRaises(PermissionError) as raised:
+                etv.sync_yaml(style)
+
+        self.assertNotIsInstance(
+            raised.exception,
+            etv.YamlFilesystemPermissionError,
+        )
+        self.assertNotIn(
+            "filesystem permissions",
+            app_module._yaml_sync_error(raised.exception, saved=True).detail,
+        )
 
     def test_user_template_name_rejects_empty_or_whitespace_only(self):
         for name in ("", "   ", "\t\n"):
@@ -300,7 +382,7 @@ class CoreLogicTests(unittest.TestCase):
                                 normal_style.appearance.channel_font_size,
                                 normal_style.appearance.now_font_size,
                                 normal_style.appearance.next_font_size,
-                            ) * 4.75),
+                            ) * (7.25 if template["id"] == "holiday-broadcast" else 4.75)),
                         ),
                     )
                     self.assertEqual(
@@ -364,6 +446,62 @@ class CoreLogicTests(unittest.TestCase):
                                 struct.calcsize(">HHHHH")
                                 + packet_width * packet_height * 4,
                             )
+
+    def test_pillow_text_alpha_and_slide_composition_for_builtin_templates(self):
+        draw = ImageDraw.Draw(Image.new("RGBA", (320, 120)))
+        font = _font(18)
+        bbox = draw.textbbox((0, 0), "Ag", font=font)
+        self.assertGreater(bbox[2] - bbox[0], 0)
+        self.assertGreater(bbox[3] - bbox[1], 0)
+
+        text = "NOW a long program title that must wrap across lines"
+        lines = _wrap_words(draw, text, font, 120)
+        self.assertGreater(len(lines), 1)
+        for line in lines:
+            self.assertLessEqual(_text_width(draw, line, font), 120)
+        self.assertLessEqual(_text_width(draw, _truncate(draw, text, font, 120), font), 120)
+
+        context = normalize_context(
+            "",
+            "Pillow 13 Test Channel",
+            {"FrameRate": 10, "Resolution": {"Width": 640, "Height": 480}},
+        )
+        for template in BUILTIN_TEMPLATES:
+            base_style = template["style"]
+            appearance = base_style.appearance.model_copy(update={
+                "opacity": 0.5,
+                "entrance_animation_style": "slide-left",
+                "entrance_duration_seconds": 0.5,
+            })
+            style = base_style.model_copy(update={"appearance": appearance})
+            region = _region(style, context)
+            width, height = region[2:]
+
+            with self.subTest(template=template["id"]):
+                bgra = _frame(style, context, 1.0, region, "none", "enter")
+                self.assertEqual(len(bgra), width * height * 4)
+                image = Image.frombytes(
+                    "RGBA", (width, height), bgra, "raw", "BGRA",
+                )
+                self.assertEqual(image.getchannel("A").getextrema()[0], 0)
+                self.assertLessEqual(image.getchannel("A").getextrema()[1], 127)
+
+                faded = _frame(style, context, 0.5, region, "fade", "enter")
+                faded_alpha = Image.frombytes(
+                    "RGBA", (width, height), faded, "raw", "BGRA",
+                ).getchannel("A")
+                self.assertGreater(faded_alpha.getextrema()[1], 0)
+                self.assertLess(
+                    faded_alpha.getextrema()[1],
+                    image.getchannel("A").getextrema()[1],
+                )
+
+                slid = _frame(style, context, 0.5, region, "slide-left", "enter")
+                slid_alpha = Image.frombytes(
+                    "RGBA", (width, height), slid, "raw", "BGRA",
+                ).getchannel("A")
+                self.assertEqual(slid_alpha.getextrema()[0], 0)
+                self.assertGreater(slid_alpha.getextrema()[1], 0)
 
 
 class ConfigurationTests(unittest.TestCase):

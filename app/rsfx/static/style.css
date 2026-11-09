@@ -405,3 +405,11 @@ html[data-ui-theme="light"] .template-swatch{
         flex-direction:column-reverse;
     }
 }
+
+/* Holiday Broadcast: server-rendered pixel-identical Pillow still preview. */
+.holiday-controls{margin:12px 0 18px;padding:14px;border:1px solid #776548;border-radius:10px;background:rgba(157,116,48,.075)}
+.holiday-controls .grid{align-items:center;gap:12px}
+.holiday-controls .check{align-self:center;display:flex;align-items:center;gap:8px}
+.preview-overlay.holiday-broadcast-preview{background:transparent!important;box-shadow:none!important;border:0!important;overflow:visible}
+.holiday-pillow-frame{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:none;object-fit:fill}
+.holiday-template-thumbnail{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
